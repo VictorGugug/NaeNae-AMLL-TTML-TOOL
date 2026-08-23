@@ -29,6 +29,8 @@ import { HomeMenu } from "./modals/HomeMenu";
 import { ToolMenu } from "./modals/ToolMenu";
 import { useTopMenuActions } from "./useTopMenuActions";
 
+// top menu actions are used inside individual menu components
+
 const useWindowSize = () => {
 	const [windowSize, setWindowSize] = useState({
 		width: window.innerWidth,

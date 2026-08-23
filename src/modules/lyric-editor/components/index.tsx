@@ -74,7 +74,10 @@ import {
 	SectionManagerDialog,
 	SectionMetadataDialog,
 } from "./SectionActions";
-import { shouldAutoCenterSelection } from "./selection-scroll";
+import {
+	findClosestLineToViewportCenter,
+	shouldAutoCenterSelection,
+} from "./selection-scroll";
 
 const lyricLinesOnlyAtom = splitAtom(
 	focusAtom(lyricLinesAtom, (o) => o.prop("lyricLines")),
@@ -509,6 +512,27 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 		},
 		[visibleItems],
 	);
+	const restoreEditorAnchorOnListReady = useCallback(
+		(instance: ViewportListRef | null) => {
+			viewRef.current = instance;
+			if (!instance || editorAnchorLineIndex === -1) return;
+			const anchorIndex = editorAnchorLineIndex;
+			const visibleIndex = visibleItems.findIndex(
+				(item) => item.sourceIndex === anchorIndex,
+			);
+			if (visibleIndex === -1) return;
+			requestAnimationFrame(() => {
+				const viewEl = viewElRef.current;
+				if (!viewEl?.parentElement) return;
+				const offset = viewEl.parentElement.clientHeight / -2 + 50;
+				instance.scrollToIndex({ index: visibleIndex, offset });
+				if (editorAnchorLineIndex === anchorIndex) {
+					editorAnchorLineIndex = -1;
+				}
+			});
+		},
+		[visibleItems],
+	);
 
 	const geniusCategorizationEnabled = useAtomValue(
 		geniusCategorizationEnabledAtom,
@@ -549,33 +573,28 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 		const viewEl = viewElRef.current;
 		if (!viewEl) return;
 		const viewRect = viewEl.getBoundingClientRect();
-		const centerY = viewRect.top + viewRect.height / 2;
-		let closest = -1;
-		let closestDistance = Number.POSITIVE_INFINITY;
-
-		for (const child of viewEl.querySelectorAll("[data-lyric-line-index]")) {
-			const rect = child.getBoundingClientRect();
-			const childCenterY = rect.top + rect.height / 2;
-			const distance = Math.abs(childCenterY - centerY);
-			if (distance < closestDistance) {
-				closestDistance = distance;
-				const index = Number(child.getAttribute("data-lyric-line-index"));
-				if (!Number.isNaN(index)) {
-					closest = index;
-				}
-			}
-		}
-
-		if (closest !== -1) {
-			editorAnchorLineIndex = closest;
-		}
+		const positions = Array.from(
+			viewEl.querySelectorAll<HTMLElement>("[data-lyric-line-index]"),
+		).flatMap((element) => {
+			const index = Number(element.dataset.lyricLineIndex);
+			if (!Number.isFinite(index)) return [];
+			const rect = element.getBoundingClientRect();
+			return [{ index, top: rect.top, height: rect.height }];
+		});
+		editorAnchorLineIndex = findClosestLineToViewportCenter(
+			viewRect.top + viewRect.height / 2,
+			positions,
+		);
 	}, []);
 
 	useEffect(() => {
 		const viewEl = viewElRef.current;
 		if (!viewEl) return;
 		viewEl.addEventListener("scroll", updateEditorAnchor, { passive: true });
-		return () => viewEl.removeEventListener("scroll", updateEditorAnchor);
+		return () => {
+			updateEditorAnchor();
+			viewEl.removeEventListener("scroll", updateEditorAnchor);
+		};
 	}, [updateEditorAnchor]);
 
 	const restoredAnchorRef = useRef(false);
@@ -622,7 +641,6 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 		const raf = requestAnimationFrame(() => scrollToLineIndex(index, true));
 		return () => cancelAnimationFrame(raf);
 	}, [toolMode, previewFollowsPlayback, scrollToLineIndex, store]);
-
 	const handleLocate = useCallback(() => {
 		const currentTime = audioEngine.musicPlaying
 			? audioEngine.musicCurrentTime * 1000
@@ -739,7 +757,7 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 				<ViewportList
 					overscan={10}
 					items={visibleItems}
-					ref={viewRef}
+					ref={restoreEditorAnchorOnListReady}
 					viewportRef={viewElRef}
 				>
 					{(item) => (

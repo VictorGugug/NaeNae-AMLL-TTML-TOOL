@@ -270,6 +270,8 @@ export const normalizeCyrillicEsOnImportAtom = atomWithStorage<boolean>(
 export const allowConsecutiveBackgroundLinesAtom = atomWithStorage<boolean>(
 	"allowConsecutiveBackgroundLines",
 	false,
+	undefined,
+	{ getOnInit: true },
 );
 
 export const lyricTextNormalizationOptionsAtom = atom((get) => ({
@@ -303,6 +305,13 @@ export const boykisserUnlockedAtom = atom<boolean>(false);
 export const glassmorphismBlurAtom = atomWithStorage<number>(
 	"glassmorphismBlur",
 	16,
+);
+
+export const interfaceScaleAtom = atomWithStorage<number>(
+	"interfaceScale",
+	1,
+	undefined,
+	{ getOnInit: true },
 );
 
 export enum AppearanceEditorMode {

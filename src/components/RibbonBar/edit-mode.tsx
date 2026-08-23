@@ -424,7 +424,7 @@ function EditField<
 						: label}
 				</Button>
 			) : (
-				<Text wrap="nowrap" size="1" style={{ color: "var(--accent-11)" }}>
+				<Text wrap="nowrap" size="1" style={{ color: "var(--ribbon-label-color)" }}>
 					{label}
 				</Text>
 			)}
@@ -534,7 +534,7 @@ function CheckboxField<
 
 	return (
 		<>
-			<Text wrap="nowrap" size="1" style={{ color: "var(--accent-11)" }}>
+			<Text wrap="nowrap" size="1" style={{ color: "var(--ribbon-label-color)" }}>
 				<label htmlFor={checkboxId}>{label}</label>
 			</Text>
 			<Checkbox
@@ -681,12 +681,12 @@ function EditModeField({
 			size="1"
 		>
 			<Flex gapY="3" direction="column">
-				<Text wrap="nowrap" size="1" style={{ color: "var(--accent-11)" }}>
+				<Text wrap="nowrap" size="1" style={{ color: "var(--ribbon-label-color)" }}>
 					<RadioGroup.Item value={LayoutMode.Simple}>
 						{simpleModeLabel}
 					</RadioGroup.Item>
 				</Text>
-				<Text wrap="nowrap" size="1" style={{ color: "var(--accent-11)" }}>
+				<Text wrap="nowrap" size="1" style={{ color: "var(--ribbon-label-color)" }}>
 					<RadioGroup.Item value={LayoutMode.Advance}>
 						{advanceModeLabel}
 					</RadioGroup.Item>
@@ -818,7 +818,7 @@ const AuxiliaryDisplayField: FC = () => {
 
 	return (
 		<Grid columns="1fr auto" gapX="4" gapY="1" flexGrow="1" align="center">
-			<Text size="1" asChild style={{ color: "var(--accent-11)" }}>
+			<Text size="1" asChild style={{ color: "var(--ribbon-label-color)" }}>
 				<label htmlFor={idTranslation}>
 					{t("ribbonBar.editMode.showTranslation", "Show Translation Line")}
 				</label>
@@ -828,7 +828,7 @@ const AuxiliaryDisplayField: FC = () => {
 				checked={showTranslation}
 				onCheckedChange={(c) => setShowTranslation(Boolean(c))}
 			/>
-			<Text size="1" asChild style={{ color: "var(--accent-11)" }}>
+			<Text size="1" asChild style={{ color: "var(--ribbon-label-color)" }}>
 				<label htmlFor={idRomanization}>
 					{t("ribbonBar.editMode.showRomanization", "Show Romanization Line")}
 				</label>
@@ -838,7 +838,7 @@ const AuxiliaryDisplayField: FC = () => {
 				checked={showRomanization}
 				onCheckedChange={(c) => setShowRomanization(Boolean(c))}
 			/>
-			<Text size="1" asChild style={{ color: "var(--accent-11)" }}>
+			<Text size="1" asChild style={{ color: "var(--ribbon-label-color)" }}>
 				<label htmlFor={idPerWord}>
 					{t("ribbonBar.editMode.showWordRomanizationInput", "Show Per-Word Romanization")}
 				</label>
