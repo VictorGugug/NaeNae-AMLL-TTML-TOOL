@@ -301,7 +301,10 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 			// +1 because of the <div className={styles.padding} /> at index 0
 			const groupEl = container.children[activeGroupIndex + 1] as HTMLElement;
 			if (groupEl) {
-				const targetScroll = groupEl.offsetTop - (container.clientHeight * 0.40) + (groupEl.clientHeight / 2);
+				// Anchor closer to the top (was 0.40) so the active line stays clear
+				// of the bottom edge of this panel, which sits right above the
+				// spectrogram — previously the line could end up hidden behind it.
+				const targetScroll = groupEl.offsetTop - (container.clientHeight * 0.30) + (groupEl.clientHeight / 2);
 				container.scrollTo({ top: targetScroll, behavior: "smooth" });
 			}
 		}

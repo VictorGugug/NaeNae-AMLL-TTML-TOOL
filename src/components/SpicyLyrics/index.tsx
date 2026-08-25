@@ -690,12 +690,15 @@ export const SpicyLyrics = memo(() => {
 						visible &&
 						lastLine.current !== scrollTarget.id))
 			) {
+				// Anchored slightly above dead-center (was an exact 50/50 split) so
+				// it lines up with the other preview modes, which now also keep the
+				// active line a bit higher to clear the spectrogram below.
 				const target = Math.max(
 					0,
 					Math.min(
 						viewport.scrollHeight - viewport.clientHeight,
 						scrollNode.offsetTop -
-							(viewport.clientHeight / 2 - scrollNode.offsetHeight / 2) +
+							(viewport.clientHeight * 0.42 - scrollNode.offsetHeight / 2) +
 							30,
 					),
 				);

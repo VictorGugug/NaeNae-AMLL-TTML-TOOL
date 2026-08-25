@@ -10,6 +10,13 @@
 	font-family: var(--default-font-family, "Inter", -apple-system, sans-serif);
 	display: flex;
 	flex-direction: column;
+	/* Size container: lets .lyricsViewport pad relative to THIS panel's
+	   real height (cqh) instead of the full window (vh). When the
+	   spectrogram panel eats vertical space, vh no longer reflects the
+	   actual panel size, which was pushing the active line down until it
+	   sat right at the spectrogram boundary. */
+	container-type: size;
+	container-name: amll-preview;
 }
 
 .amllWrapper * {
@@ -64,7 +71,12 @@
 	flex-grow: 1;
 	overflow-y: auto;
 	scrollbar-width: none;
-	padding: 18vh 12vw 38vh;
+	/* cqh/cqw (relative to .amllWrapper's own size, see container-type
+	   above) instead of vh/vw so this scales with the actual preview
+	   panel height, not the whole window. Also trimmed from 18/38 so the
+	   padding can't outgrow a short panel and squeeze all the lines down
+	   near the bottom edge. */
+	padding: 12cqh 10cqw 22cqh;
 	scroll-behavior: smooth;
 	position: relative;
 	mask-image: linear-gradient(
