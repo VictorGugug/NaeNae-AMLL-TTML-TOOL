@@ -1,25 +1,14 @@
 import { atomWithKeybindingStorage } from "$/utils/keybindings";
 import type { I18nKey, KeyBindingCommand, KeyBindingsConfig } from "./types";
 
-/**
- * 存储所有注册的命令
- *
- * @internal
- */
 const commandsMap = new Map<string, KeyBindingCommand>();
 
-/**
- * 注册一个快捷键命令
- * @param id 唯一 ID (例如 "file.save")
- * @param defaultKeys 默认按键 (例如 ["Control", "KeyS"])
- * @param description i18n key
- * @param category 分类 (例如 "File")
- */
 export function registerCommand(
 	id: string,
 	defaultKeys: KeyBindingsConfig,
 	description: I18nKey,
 	category = "General",
+	fallback?: string,
 ) {
 	const commandAtom = atomWithKeybindingStorage(id, defaultKeys);
 
@@ -27,6 +16,7 @@ export function registerCommand(
 		id,
 		defaultKeys,
 		description,
+		fallback,
 		category,
 		atom: commandAtom,
 	};

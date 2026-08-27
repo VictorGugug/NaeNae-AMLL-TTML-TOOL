@@ -55,10 +55,32 @@ function pushMetadata(
 	}
 }
 
+function parseSegment(raw: unknown): LyricWordBase | null {
+	if (!raw || typeof raw !== "object") return null;
+	const rec = raw as Record<string, unknown>;
+	const text = asString(rec.text);
+	if (!text) return null;
+	const seg: LyricWordBase = {
+		word: text,
+		startTime: asNumber(rec.start_ms),
+		endTime: asNumber(rec.end_ms),
+	};
+	const segTrans = asString(rec.transliteration);
+	if (segTrans) seg.romanWord = segTrans;
+	const segTrans2 = asString(rec.translation);
+	if (segTrans2) seg.translation = segTrans2;
+	return seg;
+}
+
 function parseWord(raw: LyricsfileWord): LyricWord {
+	const rawRec = raw as Record<string, unknown>;
+	const trailingSepRaw = rawRec.trailing_separator;
+	const trailingSep =
+		typeof trailingSepRaw === "string" ? trailingSepRaw : undefined;
+	const baseText = typeof raw.text === "string" ? raw.text : "";
 	const word: LyricWord = {
 		id: uid(),
-		word: raw.text,
+		word: trailingSep !== undefined ? baseText + trailingSep : baseText,
 		startTime: asNumber(raw.start_ms),
 		endTime: asNumber(raw.end_ms),
 		obscene: false,
@@ -66,15 +88,21 @@ function parseWord(raw: LyricsfileWord): LyricWord {
 		romanWord: "",
 	};
 	const transliteration = asString(raw.transliteration);
-	if (transliteration) {
-		word.romanWord = transliteration;
-	}
+	if (transliteration) word.romanWord = transliteration;
+	const translation = asString(raw.translation);
+	if (translation) word.translation = translation;
+	if (trailingSep !== undefined) word.trailingSeparator = trailingSep;
 	if (Array.isArray(raw.segments) && raw.segments.length > 0) {
-		word.ruby = raw.segments.map((segment) => ({
-			word: segment.text,
-			startTime: asNumber(segment.start_ms),
-			endTime: asNumber(segment.end_ms),
-		}));
+		const segs = raw.segments
+			.map(parseSegment)
+			.filter((s): s is LyricWordBase => s !== null);
+		if (segs.length > 0) word.ruby = segs;
+	}
+	if (Array.isArray(raw.syllables) && raw.syllables.length > 0) {
+		const syls = raw.syllables
+			.map(parseSegment)
+			.filter((s): s is LyricWordBase => s !== null);
+		if (syls.length > 0) word.segments = syls;
 	}
 	return word;
 }
@@ -90,9 +118,12 @@ function parseLine(
 	raw: LyricsfileLine,
 	slots: VocalistIdSlots,
 ): LyricLine {
-	const rawVocalistIds = Array.isArray(raw.vocalist) ? raw.vocalist : [];
-	// Strip the "-bg" background suffix (e.g. "v1-bg" -> "v1") before matching
-	// against the known main/duet/middle/group vocalist ids.
+	const rawVocalistValue = (raw as { vocalist?: unknown }).vocalist;
+	const rawVocalistIds: string[] = Array.isArray(rawVocalistValue)
+		? (rawVocalistValue.filter((v) => typeof v === "string") as string[])
+		: typeof rawVocalistValue === "string"
+			? [rawVocalistValue]
+			: [];
 	const baseVocalistIds = rawVocalistIds.map((id) =>
 		id.endsWith(VOCALIST_BG_SUFFIX)
 			? id.slice(0, -VOCALIST_BG_SUFFIX.length)
@@ -107,8 +138,6 @@ function parseLine(
 
 	const hasDuetGroupExplicit =
 		!!groupVocalistId && baseVocalistIds.includes(groupVocalistId);
-	// Legacy fallback: older exports marked a "sung together" line by listing
-	// both the main and duet vocalist ids on the same line, with no v4.
 	const hasDuetGroupLegacy =
 		!groupVocalistId &&
 		!!mainVocalistId &&
@@ -194,6 +223,9 @@ export function parseLyricsfile(text: string): TTMLLyric {
 
 	const metadata: TTMLMetadata[] = [];
 	const rawMetadata = raw.metadata;
+	let durationMs: number | undefined;
+	let offsetMs: number | undefined;
+	let instrumental: boolean | undefined;
 	if (rawMetadata && typeof rawMetadata === "object") {
 		const title = asString(rawMetadata.title);
 		if (title) pushMetadata(metadata, METADATA_TITLE_KEY, title);
@@ -203,12 +235,28 @@ export function parseLyricsfile(text: string): TTMLLyric {
 		if (album) pushMetadata(metadata, METADATA_ALBUM_KEY, album);
 		const language = asString(rawMetadata.language);
 		if (language) pushMetadata(metadata, METADATA_LANGUAGE_KEY, language);
+		if (
+			typeof (rawMetadata as Record<string, unknown>).duration_ms === "number" &&
+			Number.isFinite((rawMetadata as Record<string, unknown>).duration_ms as number) &&
+			(rawMetadata as Record<string, unknown>).duration_ms as number >= 0
+		) {
+			durationMs = Math.round(
+				(rawMetadata as Record<string, unknown>).duration_ms as number,
+			);
+		}
+		if (
+			typeof (rawMetadata as Record<string, unknown>).offset_ms === "number" &&
+			Number.isFinite((rawMetadata as Record<string, unknown>).offset_ms as number)
+		) {
+			offsetMs = Math.round(
+				(rawMetadata as Record<string, unknown>).offset_ms as number,
+			);
+		}
+		if (typeof (rawMetadata as Record<string, unknown>).instrumental === "boolean") {
+			instrumental = (rawMetadata as Record<string, unknown>).instrumental as boolean;
+		}
 	}
 
-	// Resolve the main/duet/middle/group vocalist ids and their display names.
-	// Vocalists that literally use the "v1".."v4" convention are matched by id;
-	// any other id is assigned positionally for backward compatibility with
-	// older/foreign lyricsfile documents.
 	let mainVocalistId: string | undefined;
 	let duetVocalistId: string | undefined;
 	let middleVocalistId: string | undefined;
@@ -248,6 +296,18 @@ export function parseLyricsfile(text: string): TTMLLyric {
 		if (name) {
 			vocalistNames[id] = name;
 		}
+	}
+	if (mainVocalistId && mainVocalistId !== VOCALIST_ID_MAIN && vocalistNames[mainVocalistId] && !vocalistNames[VOCALIST_ID_MAIN]) {
+		vocalistNames[VOCALIST_ID_MAIN] = vocalistNames[mainVocalistId];
+	}
+	if (duetVocalistId && duetVocalistId !== VOCALIST_ID_DUET && vocalistNames[duetVocalistId] && !vocalistNames[VOCALIST_ID_DUET]) {
+		vocalistNames[VOCALIST_ID_DUET] = vocalistNames[duetVocalistId];
+	}
+	if (middleVocalistId && middleVocalistId !== VOCALIST_ID_MIDDLE && vocalistNames[middleVocalistId] && !vocalistNames[VOCALIST_ID_MIDDLE]) {
+		vocalistNames[VOCALIST_ID_MIDDLE] = vocalistNames[middleVocalistId];
+	}
+	if (groupVocalistId && groupVocalistId !== VOCALIST_ID_GROUP && vocalistNames[groupVocalistId] && !vocalistNames[VOCALIST_ID_GROUP]) {
+		vocalistNames[VOCALIST_ID_GROUP] = vocalistNames[groupVocalistId];
 	}
 
 	let sections: LyricSection[] | undefined;
@@ -320,5 +380,15 @@ export function parseLyricsfile(text: string): TTMLLyric {
 		sections,
 		reversedSyncLineIds,
 		vocalistNames,
+		plain: typeof raw.plain === "string" ? raw.plain : undefined,
+		plainTransliteration:
+			typeof raw.plain_transliteration === "string"
+				? raw.plain_transliteration
+				: undefined,
+		plainTranslation:
+			typeof raw.plain_translation === "string" ? raw.plain_translation : undefined,
+		durationMs,
+		offsetMs,
+		instrumental,
 	};
 }

@@ -44,10 +44,14 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
-import { currentTimeAtom } from "$/modules/audio/states/index.ts";
+import {
+	activeLineIdsAtom,
+	currentTimeAtom,
+} from "$/modules/audio/states/index.ts";
 import {
 	advGeniusHeaderColorAtom,
 	compactBGInSyncAtom,
+	editActiveLineHighlightAtom,
 	geniusCategorizationEnabledAtom,
 	legacySpaceLabelsAtom,
 	showLineRomanizationAtom,
@@ -315,11 +319,8 @@ const SubLineEdit = memo(
 	},
 );
 
-// Same row style as SubLineEdit ("Translation:" / "Romanization:"), but for
-// the vocalist name of the resolved v2/v3/v4 role on this line. Editing
-// renames the vocalist everywhere (writes to lyricLinesAtom.vocalistNames),
 const VOCALIST_ROLE_LABELS: Record<string, { lead: string; bg: string }> = {
-	v1: { lead: "v1-lead (Principal)", bg: "v1-bg (Background)" },
+	v1: { lead: "v1-lead (Lead)", bg: "v1-bg (Background)" },
 	v2: { lead: "v2-duet (Duet)", bg: "v2-bg (Duet BG)" },
 	v3: { lead: "v3-middle (Middle)", bg: "v3-bg (Middle BG)" },
 	v4: { lead: "v4-harmony (Harmony)", bg: "v4-bg (Harmony BG)" },
@@ -333,11 +334,13 @@ const VocalistLineEdit = memo(
 		const [inputValue, setInputValue] = useState("");
 		const { t } = useTranslation();
 
-		const roleMeta = VOCALIST_ROLE_LABELS[vocalistId] ?? {
-			lead: `${vocalistId}-lead`,
-			bg: `${vocalistId}-bg`,
-		};
-		const rolePrefix = isBG ? roleMeta.bg : roleMeta.lead;
+		const rolePrefix = (() => {
+			const fallback =
+				VOCALIST_ROLE_LABELS[vocalistId] ??
+				({ lead: `${vocalistId}-lead`, bg: `${vocalistId}-bg` } as const);
+			const key = isBG ? `${vocalistId}Bg` : `${vocalistId}Lead`;
+			return t(`lyricLineView.vocalist.${key}`, isBG ? fallback.bg : fallback.lead);
+		})();
 		const currentName = vocalistNames[vocalistId] ?? "";
 
 		const onEnter = useCallback(
@@ -476,6 +479,18 @@ export const LyricLineView: FC<{
 	);
 	const words = useAtomValue(wordsAtom);
 	const lineSelected = useAtomValue(lineSelectedAtom);
+	const editActiveLineHighlight = useAtomValue(editActiveLineHighlightAtom);
+	const isPlaybackActiveAtom = useMemo(() => {
+		const a = atom((get) => {
+			if (!get(editActiveLineHighlightAtom)) return false;
+			return get(activeLineIdsAtom).includes(line.id);
+		});
+		if (import.meta.env.DEV) {
+			a.debugLabel = `isPlaybackActiveAtom-${line.id}`;
+		}
+		return a;
+	}, [line.id]);
+	const isPlaybackActive = useAtomValue(isPlaybackActiveAtom);
 	const setSelectedWords = useSetImmerAtom(selectedWordsAtom);
 	const editLyricLines = useSetImmerAtom(lyricLinesAtom);
 	const visualizeTimestampUpdate = useAtomValue(visualizeTimestampUpdateAtom);
@@ -509,10 +524,6 @@ export const LyricLineView: FC<{
 	const customHeaderColor = useAtomValue(advGeniusHeaderColorAtom);
 	const activeFileKind = useAtomValue(activeFileKindAtom);
 	const isLyricsfile = activeFileKind === ActiveFileKind.Lyricsfile;
-	// Same base-id priority as the lyricsfile writer/AMLLWrapper preview:
-	// duet-group (harmony) > duet > middle > plain lead ("v1"). Every line
-	// has a nameable vocalist - a plain lead line just resolves to the
-	// implicit "v1" id instead of one of the special roles.
 	const lineVocalistId = line.isDuetGroup
 		? "v4"
 		: line.isDuet
@@ -579,7 +590,7 @@ export const LyricLineView: FC<{
 		highlightActiveWordInEditRef.current = highlightActiveWordInEdit;
 	}, [highlightActiveWordInEdit]);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: updates active line state on toggle
+	// biome-ignore lint/correctness/useExhaustiveDependencies
 	useEffect(() => {
 		const updateActive = () => {
 			const el = lineRef.current;
@@ -675,7 +686,7 @@ export const LyricLineView: FC<{
 	const originalEndTimeRef = useRef<number | null>(null);
 	const originalNextStartTimeRef = useRef<number | null>(null);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: 用于呈现时间戳更新效果
+	// biome-ignore lint/correctness/useExhaustiveDependencies
 	useEffect(() => {
 		if (!visualizeTimestampUpdate) return;
 		const animation = startTimeRef.current?.animate(
@@ -703,7 +714,7 @@ export const LyricLineView: FC<{
 		}
 	}, [toolMode, disableInsert]);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: 用于呈现时间戳更新效果
+	// biome-ignore lint/correctness/useExhaustiveDependencies
 	useEffect(() => {
 		if (!visualizeTimestampUpdate) return;
 		const animation = endTimeRef.current?.animate(
@@ -933,6 +944,10 @@ export const LyricLineView: FC<{
 								compactBGInSync &&
 								styles.bg,
 							lineSelected && styles.selected,
+							editActiveLineHighlight &&
+								isPlaybackActive &&
+								toolMode === ToolMode.Edit &&
+								styles.activePlayback,
 							toolMode === ToolMode.Sync && styles.sync,
 							toolMode === ToolMode.Edit && styles.edit,
 							line.ignoreSync && styles.ignoreSync,

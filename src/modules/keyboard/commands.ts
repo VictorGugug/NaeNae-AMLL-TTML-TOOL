@@ -103,6 +103,14 @@ export const cmdSwitchPreviewMode = registerCommand(
 	"View",
 );
 
+export const cmdLocateActiveLine = registerCommand(
+	"locateActiveLine",
+	[CONTROL_KEY, "Shift", "KeyL"],
+	t("settingsDialog.keybindings.locateActiveLine"),
+	"View",
+	"View - Center playing line",
+);
+
 export const cmdMoveNextWord = registerCommand(
 	"moveNextWord",
 	["KeyD"],

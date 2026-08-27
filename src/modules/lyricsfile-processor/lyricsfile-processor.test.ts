@@ -234,7 +234,6 @@ lines:
 		expect(parsed.lyricLines[3].isDuet).toBe(true);
 		expect(parsed.lyricLines[3].isBG).toBe(true);
 
-		// Idempotent: names and ids survive a second export unchanged.
 		expect(exportLyricsfileText(parsed)).toBe(yaml);
 	});
 
@@ -256,5 +255,193 @@ lines:
 		const parsed = parseLyricsfile(yaml);
 		expect(parsed.lyricLines[0].isLineSynced).toBe(true);
 		expect(parsed.lyricLines[0].words.map((w) => w.word)).toEqual(["Whole line"]);
+	});
+
+	it("accepts vocalist as single string and as array (issue #3 interop)", () => {
+		const yamlSingle = `version: '1.1'
+metadata:
+  title: T
+  artist: A
+  vocalists:
+    - id: ada
+      name: Ada
+    - id: rio
+      name: Rio
+lines:
+  - text: Hello
+    start_ms: 0
+    end_ms: 1000
+    vocalist: ada
+  - text: World
+    start_ms: 1000
+    end_ms: 2000
+    vocalist: [rio]
+`;
+		const p = parseLyricsfile(yamlSingle);
+		expect(p.lyricLines).toHaveLength(2);
+		expect(p.vocalistNames?.v1).toBe("Ada");
+		expect(p.vocalistNames?.v2).toBe("Rio");
+	});
+
+	it("parses syllables alias as segments and round-trips via syllables (issue #4)", () => {
+		const yaml = `version: '1.1'
+metadata:
+  title: S
+  artist: A
+lines:
+  - text: 'Stay until'
+    start_ms: 4200
+    end_ms: 5400
+    words:
+      - text: 'Stay '
+        start_ms: 4200
+        end_ms: 4800
+      - text: 'until '
+        start_ms: 4800
+        end_ms: 5400
+        syllables:
+          - text: 'un'
+            start_ms: 4800
+            end_ms: 5200
+          - text: 'til '
+            start_ms: 5200
+            end_ms: 5400
+`;
+		const p = parseLyricsfile(yaml);
+		expect(p.lyricLines[0].words[1].segments).toHaveLength(2);
+		expect(p.lyricLines[0].words[1].segments?.[0].word).toBe("un");
+		const out = exportLyricsfileText(p);
+		expect(out).toContain("syllables:");
+		const p2 = parseLyricsfile(out);
+		expect(p2.lyricLines[0].words[1].segments?.[0].word).toBe("un");
+	});
+
+	it("preserves plain_transliteration and plain_translation (issue #8)", () => {
+		const yaml = `version: '1.1'
+metadata:
+  title: Ja
+  artist: A
+  language: ja
+lines:
+  - text: '今日'
+    start_ms: 1000
+    end_ms: 2000
+    transliteration: kyou
+    words:
+      - text: '今日'
+        start_ms: 1000
+        end_ms: 2000
+        transliteration: kyou
+        segments:
+          - text: '今'
+            start_ms: 1000
+            end_ms: 1500
+            transliteration: kyo
+          - text: '日'
+            start_ms: 1500
+            end_ms: 2000
+            transliteration: u
+plain: |
+  今日
+plain_transliteration: |
+  kyou
+plain_translation: |
+  today
+`;
+		const p = parseLyricsfile(yaml);
+		expect(p.plain).toBe("今日\n");
+		expect(p.plainTransliteration).toBe("kyou\n");
+		expect(p.plainTranslation).toBe("today\n");
+		expect(p.lyricLines[0].words[0].ruby?.[0].romanWord).toBe("kyo");
+		const out = exportLyricsfileText(p);
+		expect(out).toContain("plain_transliteration:");
+		expect(out).toContain("kyou");
+		const p2 = parseLyricsfile(out);
+		expect(p2.plainTransliteration).toBe(p.plainTransliteration);
+	});
+
+	it("handles duration_ms, offset_ms and instrumental flag (spec + issue #7)", () => {
+		const yaml = `version: '1.1'
+metadata:
+  title: Inst
+  artist: A
+  duration_ms: 480000
+  offset_ms: -50
+  instrumental: true
+plain: ''
+`;
+		const p = parseLyricsfile(yaml);
+		expect(p.instrumental).toBe(true);
+		expect(p.durationMs).toBe(480000);
+		expect(p.offsetMs).toBe(-50);
+		const lyric: TTMLLyric = {
+			metadata: [{ key: "musicName", value: ["Inst"] }],
+			lyricLines: [],
+			instrumental: true,
+			durationMs: 480000,
+			offsetMs: -50,
+			plain: "",
+		};
+		const out = exportLyricsfileText(lyric);
+		expect(out).toContain("instrumental: true");
+		expect(out).toContain("duration_ms: 480000");
+		expect(out).toContain("offset_ms: -50");
+	});
+
+	it("supports trailing_separator as alternative to trailing space (issue #1)", () => {
+		const yaml = `version: '1.1'
+metadata:
+  title: T
+  artist: A
+lines:
+  - text: 'Hello world'
+    start_ms: 0
+    end_ms: 1000
+    words:
+      - text: 'Hello'
+        start_ms: 0
+        end_ms: 500
+        trailing_separator: ' '
+      - text: 'world'
+        start_ms: 500
+        end_ms: 1000
+`;
+		const p = parseLyricsfile(yaml);
+		expect(p.lyricLines[0].words[0].word).toBe("Hello ");
+		expect(p.lyricLines[0].words[0].trailingSeparator).toBe(" ");
+		const out = exportLyricsfileText(p);
+		expect(out).toContain("trailing_separator:");
+		const p2 = parseLyricsfile(out);
+		expect(p2.lyricLines[0].words[0].trailingSeparator).toBe(" ");
+	});
+
+	it("preserves word translation and segment translation (issue #8 + #9)", () => {
+		const yaml = `version: '1.1'
+metadata:
+  title: T
+  artist: A
+lines:
+  - text: 'Hello'
+    start_ms: 0
+    end_ms: 1000
+    translation: Hola
+    words:
+      - text: 'Hello'
+        start_ms: 0
+        end_ms: 1000
+        translation: Hola
+        transliteration: hello
+        segments:
+          - text: 'Hel'
+            start_ms: 0
+            end_ms: 500
+            translation: Ho
+`;
+		const p = parseLyricsfile(yaml);
+		expect(p.lyricLines[0].translatedLyric).toBe("Hola");
+		expect(p.lyricLines[0].words[0].translation).toBe("Hola");
+		expect(p.lyricLines[0].words[0].ruby?.[0].translation).toBe("Ho");
+		const out = exportLyricsfileText(p);
+		expect(out).toContain("translation: Hola");
 	});
 });

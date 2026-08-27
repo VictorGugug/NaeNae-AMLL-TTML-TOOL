@@ -34,6 +34,12 @@ export interface TTMLLyric {
 	sections?: LyricSection[];
 	reversedSyncLineIds?: string[];
 	vocalistNames?: Record<string, string>;
+	plain?: string;
+	plainTransliteration?: string;
+	plainTranslation?: string;
+	durationMs?: number;
+	offsetMs?: number;
+	instrumental?: boolean;
 }
 
 export const LYRIC_SECTION_CATEGORIES = [
@@ -75,6 +81,8 @@ export interface LyricWordBase {
 	endTime: number;
 	word: string;
 	emptyBeat?: number;
+	romanWord?: string;
+	translation?: string;
 }
 
 export interface LyricWord extends AMLLLyricWord {
@@ -88,6 +96,9 @@ export interface LyricWord extends AMLLLyricWord {
 	grammarWarning?: boolean;
 	ruby?: LyricWordBase[];
 	romanWord: string;
+	translation?: string;
+	trailingSeparator?: string;
+	segments?: LyricWordBase[];
 }
 
 export const newLyricWord = (): LyricWord => ({

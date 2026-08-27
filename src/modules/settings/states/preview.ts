@@ -25,6 +25,10 @@ export const lyricWordFadeWidthAtom = atomWithStorage(
 );
 export const vsyncAtom = atomWithStorage("vsync", false);
 export const showFpsCounterAtom = atomWithStorage("showFpsCounter", false);
+export const editorAutoScrollEnabledAtom = atomWithStorage(
+	"editorAutoScrollEnabled",
+	false,
+);
 export const instantHighlightFadeAtom = atomWithStorage(
 	"instantHighlightFade",
 	true,
@@ -48,7 +52,6 @@ export const previewFollowsPlaybackAtom = atomWithStorage(
 	true,
 );
 
-/** All fork-specific feature flags. Each defaults to true (fully enabled). */
 export interface ForkFeatureFlags {
 	folderProjects: boolean;
 	dualFormatSupport: boolean;
@@ -70,11 +73,6 @@ export const featureFlagsAtom = atomWithStorage<ForkFeatureFlags>(
 	FORK_FEATURE_FLAG_DEFAULTS,
 );
 
-/**
- * Persistent list of feature flag display labels that require an app restart.
- * Each entry is a human-readable label like "Folder Projects".
- * Cleared automatically on app startup once changes have taken effect.
- */
 export const pendingRestartFlagsAtom = atomWithStorage<string[]>(
 	"pendingRestartFlags",
 	[],

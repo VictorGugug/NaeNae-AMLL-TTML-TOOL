@@ -15,6 +15,8 @@ export interface LyricsfileSegment {
 	text: string;
 	start_ms: number;
 	end_ms?: number;
+	transliteration?: string;
+	translation?: string;
 }
 
 export interface LyricsfileWord {
@@ -22,14 +24,17 @@ export interface LyricsfileWord {
 	start_ms: number;
 	end_ms?: number;
 	transliteration?: string;
+	translation?: string;
+	trailing_separator?: string;
 	segments?: LyricsfileSegment[];
+	syllables?: LyricsfileSegment[];
 }
 
 export interface LyricsfileLine {
 	text: string;
 	start_ms: number;
 	end_ms?: number;
-	vocalist?: string[];
+	vocalist?: string | string[];
 	role?: "lead" | "background";
 	translation?: string;
 	transliteration?: string;
@@ -41,6 +46,9 @@ export interface LyricsfileMetadata {
 	artist?: string;
 	album?: string;
 	language?: string;
+	duration_ms?: number;
+	offset_ms?: number;
+	instrumental?: boolean;
 	vocalists?: LyricsfileVocalist[];
 	[key: string]: unknown;
 }
@@ -58,5 +66,7 @@ export interface LyricsfileDocument {
 	lines?: LyricsfileLine[];
 	sections?: LyricsfileSection[];
 	plain?: string;
+	plain_transliteration?: string;
+	plain_translation?: string;
 	x_amll_tool?: LyricsfileToolExtension;
 }

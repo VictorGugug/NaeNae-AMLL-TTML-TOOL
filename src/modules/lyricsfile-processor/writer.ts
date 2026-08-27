@@ -21,12 +21,6 @@ const METADATA_CREATOR_KEY = "lyricsfileCreatedByDiscord";
 
 export const LYRICSSFILE_CREATOR_METADATA_KEY = METADATA_CREATOR_KEY;
 
-// Vocalist id convention (lyricsfile / YAML export only, never used for TTML):
-//   v1 -> main/lead vocalist (default, implicit when a line has no other marker)
-//   v2 -> duet vocalist
-//   v3 -> middle vocalist
-//   v4 -> duet harmony sung together (isDuetGroup)
-//   any id with a "-bg" suffix -> that vocalist singing background (e.g. "v1-bg", "v2-bg")
 export const VOCALIST_ID_MAIN = "v1";
 export const VOCALIST_ID_DUET = "v2";
 export const VOCALIST_ID_MIDDLE = "v3";
@@ -68,32 +62,84 @@ function lineText(line: LyricLine): string {
 }
 
 function buildWord(word: LyricLine["words"][number]): LyricsfileWord {
+	const hasTrailing = typeof word.trailingSeparator === "string";
+	const text = hasTrailing
+		? word.word.endsWith(word.trailingSeparator!)
+			? word.word.slice(0, -word.trailingSeparator!.length)
+			: word.word
+		: word.word;
 	const out: LyricsfileWord = {
-		text: word.word,
+		text,
 		start_ms: Math.round(word.startTime),
 		end_ms: Math.round(word.endTime),
 	};
 	if (word.romanWord && word.romanWord.trim().length > 0) {
 		out.transliteration = word.romanWord;
 	}
+	if (word.translation && word.translation.trim().length > 0) {
+		out.translation = word.translation;
+	}
+	if (hasTrailing && word.trailingSeparator!.length > 0) {
+		out.trailing_separator = word.trailingSeparator;
+	}
 	if (Array.isArray(word.ruby) && word.ruby.length > 0) {
-		out.segments = word.ruby.map((ruby) => ({
-			text: ruby.word,
-			start_ms: Math.round(ruby.startTime),
-			end_ms: Math.round(ruby.endTime),
-		}));
+		out.segments = word.ruby.map((ruby) => {
+			const seg: LyricsfileWord["segments"] extends (infer U)[] | undefined ? U : never = {
+				text: ruby.word,
+				start_ms: Math.round(ruby.startTime),
+				end_ms: Math.round(ruby.endTime),
+			} as unknown as NonNullable<NonNullable<LyricsfileWord["segments"]>[number]>;
+			if (ruby.romanWord && ruby.romanWord.trim().length > 0) {
+				(seg as Record<string, unknown>).transliteration = ruby.romanWord;
+			}
+			if (ruby.translation && ruby.translation.trim().length > 0) {
+				(seg as Record<string, unknown>).translation = ruby.translation;
+			}
+			return seg;
+		});
+	}
+	if (Array.isArray(word.segments) && word.segments.length > 0) {
+		const syls = word.segments.map((seg) => {
+			const s: NonNullable<NonNullable<LyricsfileWord["syllables"]>[number]> = {
+				text: seg.word,
+				start_ms: Math.round(seg.startTime),
+				end_ms: Math.round(seg.endTime),
+			};
+			if (seg.romanWord && seg.romanWord.trim().length > 0) {
+				(s as Record<string, unknown>).transliteration = seg.romanWord;
+			}
+			if (seg.translation && seg.translation.trim().length > 0) {
+				(s as Record<string, unknown>).translation = seg.translation;
+			}
+			return s;
+		});
+		if (syls.length > 0) {
+			if (out.segments) {
+				out.syllables = syls;
+			} else {
+				out.syllables = syls;
+			}
+		}
 	}
 	return out;
 }
 
 function hasRuby(word: LyricLine["words"][number]): boolean {
-	return Array.isArray(word.ruby) && word.ruby.length > 0;
+	return (
+		(Array.isArray(word.ruby) && word.ruby.length > 0) ||
+		(Array.isArray(word.segments) && word.segments.length > 0)
+	);
 }
 
 function buildWords(words: LyricLine["words"]): LyricsfileWord[] | undefined {
 	const out: LyricsfileWord[] = [];
 	for (const word of words) {
-		if (word.word.trim().length === 0 && !hasRuby(word)) {
+		const hasContent =
+			word.word.trim().length > 0 ||
+			(Array.isArray(word.ruby) && word.ruby.length > 0) ||
+			(Array.isArray(word.segments) && word.segments.length > 0) ||
+			(word.trailingSeparator && word.trailingSeparator.length > 0);
+		if (!hasContent) {
 			if (out.length > 0) {
 				out[out.length - 1].text += word.word;
 			}
@@ -104,11 +150,6 @@ function buildWords(words: LyricLine["words"]): LyricsfileWord[] | undefined {
 	return out.length > 0 ? out : undefined;
 }
 
-/**
- * Resolves the base vocalist id (before any "-bg" suffix) for a line,
- * following the fixed lyricsfile convention: v1 lead, v2 duet, v3 middle,
- * v4 duet-harmony-sung-together.
- */
 function resolveBaseVocalistId(line: LyricLine): string {
 	if (line.isDuetGroup) return VOCALIST_ID_GROUP;
 	if (line.isMiddle) return VOCALIST_ID_MIDDLE;
@@ -175,6 +216,9 @@ function buildLine(
 
 export function exportLyricsfileText(ttmlLyric: TTMLLyric): string {
 	const { metadata, lyricLines, sections } = ttmlLyric;
+	const instrumentalFlag = ttmlLyric.instrumental;
+	const durationMs = ttmlLyric.durationMs;
+	const offsetMs = ttmlLyric.offsetMs;
 
 	const hasDuet = lyricLines.some((l) => l.isDuet && !l.isDuetGroup);
 	const hasMiddle = lyricLines.some((l) => l.isMiddle);
@@ -206,6 +250,15 @@ export function exportLyricsfileText(ttmlLyric: TTMLLyric): string {
 		album: metadataValue(metadata, METADATA_ALBUM_KEY),
 		language: metadataValue(metadata, METADATA_LANGUAGE_KEY),
 	};
+	if (typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs >= 0) {
+		metadataDoc.duration_ms = Math.round(durationMs);
+	}
+	if (typeof offsetMs === "number" && Number.isFinite(offsetMs)) {
+		metadataDoc.offset_ms = Math.round(offsetMs);
+	}
+	if (instrumentalFlag === true) {
+		metadataDoc.instrumental = true;
+	}
 	if (hasVocalists) {
 		metadataDoc.vocalists = vocalists;
 	}
@@ -271,9 +324,28 @@ export function exportLyricsfileText(ttmlLyric: TTMLLyric): string {
 		}
 	}
 
-	if (lyricLines.length > 0) {
+	if (instrumentalFlag === true) {
+		doc.lines = [];
+		if (typeof ttmlLyric.plain === "string") doc.plain = ttmlLyric.plain;
+		else doc.plain = "";
+	} else if (lyricLines.length > 0) {
 		doc.lines = lyricLines.map((line) => buildLine(line, hasVocalists));
-		doc.plain = lyricLines.map(lineText).join("\n");
+		if (typeof ttmlLyric.plain === "string") doc.plain = ttmlLyric.plain;
+		else doc.plain = lyricLines.map(lineText).join("\n");
+		if (typeof ttmlLyric.plainTransliteration === "string" && ttmlLyric.plainTransliteration.length > 0) {
+			doc.plain_transliteration = ttmlLyric.plainTransliteration;
+		}
+		if (typeof ttmlLyric.plainTranslation === "string" && ttmlLyric.plainTranslation.length > 0) {
+			doc.plain_translation = ttmlLyric.plainTranslation;
+		}
+	} else {
+		if (typeof ttmlLyric.plain === "string") doc.plain = ttmlLyric.plain;
+		if (typeof ttmlLyric.plainTransliteration === "string" && ttmlLyric.plainTransliteration.length > 0) {
+			doc.plain_transliteration = ttmlLyric.plainTransliteration;
+		}
+		if (typeof ttmlLyric.plainTranslation === "string" && ttmlLyric.plainTranslation.length > 0) {
+			doc.plain_translation = ttmlLyric.plainTranslation;
+		}
 	}
 
 	return stringify(doc, {
