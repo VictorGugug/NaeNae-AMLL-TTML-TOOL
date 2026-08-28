@@ -117,8 +117,34 @@
 			"failed": "Conversion failed: {error}"
 		}
 	},
-	"ribbonBar": {
-		"editMode": {
+"ribbonBar": {
+	"previewMode": {
+		"mode": "Modo",
+		"standard": "Estándar",
+		"timing": "Línea de tiempo",
+		"spicy": "Picante",
+		"simpleLyrics": "Letra simple",
+		"forceLineRendering": "Forzar renderizado de línea",
+		"background": "Fondo",
+		"backgroundAnimated": "Animado",
+		"backgroundColor": "Color",
+		"backgroundStatic": "Estático",
+		"lyrics": "Letra",
+		"showTranslation": "Mostrar traducción",
+		"showRoman": "Mostrar romanización",
+		"maskObsceneWords": "Enmascarar palabras obscenas",
+		"word": "Palabra",
+		"fadeWidth": "Ancho de desvanecimiento",
+		"instantFade": "Desvanecimiento instantáneo",
+		"render": "Renderizado",
+		"dev": "Dev",
+		"showFps": "Mostrar FPS"
+	},
+	"previewStyle": {
+		"mode": "Modo de vista previa",
+		"original": "Estilo de vista previa original"
+	},
+	"editMode": {
 			"grammarCheck": "Grammar Check",
 			"multipleValues": "Multiple values…",
 			"duration": "持续时间",

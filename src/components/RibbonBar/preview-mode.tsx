@@ -18,7 +18,7 @@ import {
 	TextField,
 } from "@radix-ui/themes";
 import { useAtom } from "jotai";
-import { type FC, forwardRef } from "react";
+import { FC, forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
@@ -33,16 +33,21 @@ import {
 	spicyBackgroundModeAtom,
 	spicyForceLineSyncedAtom,
 	spicySimpleLyricsModeAtom,
+	syllableSmoothingEnabledAtom,
+	syllableSmoothingFactorAtom,
+	timeStretchAlgorithmAtom,
+	translationTypeAtom,
 	vsyncAtom,
+	useOriginalPreviewStyleAtom,
 } from "$/modules/settings/states/preview";
 import { RibbonFrame, RibbonSection } from "./common";
 import { advancedRibbonControlsAtom } from "$/modules/onboarding/states";
 
-export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
-	HTMLDivElement,
-	{ isSidebar?: boolean }
->(({ isSidebar }, ref) => {
+export const PreviewModeRibbonBar = forwardRef((isSidebar, ref) => {
 	const [previewModeType, setPreviewModeType] = useAtom(previewModeTypeAtom);
+	const [useOriginalPreviewStyle, setUseOriginalPreviewStyle] = useAtom(
+		useOriginalPreviewStyleAtom,
+	);
 	const [showTranslationLine, setShowTranslationLine] = useAtom(
 		showTranslationLinesAtom,
 	);
@@ -62,6 +67,18 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 	);
 	const [spicyBackgroundMode, setSpicyBackgroundMode] = useAtom(
 		spicyBackgroundModeAtom,
+	);
+	const [syllableSmoothingEnabled, setSyllableSmoothingEnabled] = useAtom(
+		syllableSmoothingEnabledAtom,
+	);
+	const [syllableSmoothingFactor, setSyllableSmoothingFactor] = useAtom(
+		syllableSmoothingFactorAtom,
+	);
+	const [timeStretchAlgorithm, setTimeStretchAlgorithm] = useAtom(
+		timeStretchAlgorithmAtom,
+	);
+	const [translationType, setTranslationType] = useAtom(
+		translationTypeAtom,
 	);
 	const { t } = useTranslation();
 	const [showAdvanced, setShowAdvanced] = useAtom(advancedRibbonControlsAtom);
@@ -223,7 +240,7 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 					/>
 				</Grid>
 			</RibbonSection>
-			{showAdvanced && <RibbonSection
+{showAdvanced && <RibbonSection
 				isSidebar={isSidebar}
 				label={t("ribbonBar.previewMode.render", "渲染")}
 			>
@@ -240,7 +257,7 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 					<Checkbox checked={vsync} onCheckedChange={(v) => setVsync(!!v)} />
 				</Grid>
 			</RibbonSection>}
-			{showAdvanced && <RibbonSection isSidebar={isSidebar} label={t("ribbonBar.previewMode.dev", "Dev")}>
+			{showAdvanced && <RibbonSection isSidebar={isSidebar} label={t("ribbonBar.previewStyle", "Preview Style")}>
 				<Grid
 					columns="max-content auto"
 					gap="2"
@@ -249,19 +266,22 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 					align="center"
 				>
 					<Text wrap="nowrap" size="1" style={{ color: "var(--ribbon-label-color)" }}>
-						{t("ribbonBar.previewMode.showFps", "Show FPS")}
+						{t("ribbonBar.previewStyle.original", "Original preview style")}
 					</Text>
 					<Checkbox
-						checked={showFps}
-						onCheckedChange={(v) => setShowFps(!!v)}
+						checked={useOriginalPreviewStyle}
+						onCheckedChange={(v) => setUseOriginalPreviewStyle(!!v)}
 					/>
 				</Grid>
 			</RibbonSection>}
-			<RibbonSection label={t("ribbonBar.advanced", "Advanced")} isSidebar={isSidebar}>
-				<Switch checked={showAdvanced} onCheckedChange={setShowAdvanced} />
-			</RibbonSection>
+{showAdvanced && (
+				<RibbonSection isSidebar={isSidebar} label={t("ribbonBar.advanced", "Advanced")}>
+					<Switch checked={showAdvanced} onCheckedChange={setShowAdvanced} />
+				</RibbonSection>
+			)}
 		</RibbonFrame>
 	);
 });
 
 export default PreviewModeRibbonBar;
+

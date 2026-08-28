@@ -4,6 +4,7 @@ import SuspensePlaceHolder from "$/components/SuspensePlaceHolder";
 import {
 	PreviewModeType,
 	previewModeTypeAtom,
+	useOriginalPreviewStyleAtom,
 } from "$/modules/settings/states/preview";
 import { lazy } from "$/utils/lazy.ts";
 
@@ -14,6 +15,7 @@ const SpicyLyrics = lazy(() => import("$/components/SpicyLyrics"));
 
 export const PreviewModeSwitcher = () => {
 	const previewModeType = useAtomValue(previewModeTypeAtom);
+	const useOriginalPreviewStyle = useAtomValue(useOriginalPreviewStyleAtom);
 
 	return (
 		<Suspense fallback={<SuspensePlaceHolder />}>

@@ -476,5 +476,10 @@ export {
 	spicyBackgroundModeAtom,
 	spicyForceLineSyncedAtom,
 	spicySimpleLyricsModeAtom,
+	syllableSmoothingEnabledAtom,
+	syllableSmoothingFactorAtom,
+	timeStretchAlgorithmAtom,
+	translationTypeAtom,
+	useOriginalPreviewStyleAtom,
 	vsyncAtom,
 } from "./preview";

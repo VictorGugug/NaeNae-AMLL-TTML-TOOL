@@ -52,6 +52,43 @@ export const previewFollowsPlaybackAtom = atomWithStorage(
 	true,
 );
 
+export const useOriginalPreviewStyleAtom = atomWithStorage(
+	"useOriginalPreviewStyle",
+	false,
+);
+
+export enum TimeStretchAlgorithm {
+	WSOLA = "wsola",
+	PhaseVocoder = "phase_vocoder",
+	Hybrid = "hybrid",
+}
+
+export const timeStretchAlgorithmAtom = atomWithStorage<TimeStretchAlgorithm>(
+	"timeStretchAlgorithm",
+	TimeStretchAlgorithm.Hybrid,
+);
+
+export const syllableSmoothingEnabledAtom = atomWithStorage(
+	"syllableSmoothingEnabled",
+	false,
+);
+
+export const syllableSmoothingFactorAtom = atomWithStorage(
+	"syllableSmoothingFactor",
+	0.5,
+);
+
+export enum TranslationType {
+	Subtitle = "subtitle",
+	Ruby = "ruby",
+	Sidecar = "sidecar",
+}
+
+export const translationTypeAtom = atomWithStorage<TranslationType>(
+	"translationType",
+	TranslationType.Subtitle,
+);
+
 export interface ForkFeatureFlags {
 	folderProjects: boolean;
 	dualFormatSupport: boolean;
