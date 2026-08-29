@@ -18,7 +18,7 @@ import {
 	TextField,
 } from "@radix-ui/themes";
 import { useAtom } from "jotai";
-import { FC, forwardRef } from "react";
+import { type FC, forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
@@ -43,7 +43,10 @@ import {
 import { RibbonFrame, RibbonSection } from "./common";
 import { advancedRibbonControlsAtom } from "$/modules/onboarding/states";
 
-export const PreviewModeRibbonBar = forwardRef((isSidebar, ref) => {
+export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
+	HTMLDivElement,
+	{ isSidebar?: boolean }
+>(({ isSidebar }, ref) => {
 	const [previewModeType, setPreviewModeType] = useAtom(previewModeTypeAtom);
 	const [useOriginalPreviewStyle, setUseOriginalPreviewStyle] = useAtom(
 		useOriginalPreviewStyleAtom,
@@ -84,7 +87,11 @@ export const PreviewModeRibbonBar = forwardRef((isSidebar, ref) => {
 	const [showAdvanced, setShowAdvanced] = useAtom(advancedRibbonControlsAtom);
 
 	return (
-		<RibbonFrame ref={ref} isSidebar={isSidebar}>
+		<RibbonFrame
+			ref={ref}
+			isSidebar={isSidebar}
+			reserveControlRows={3}
+		>
 			<RibbonSection
 				isSidebar={isSidebar}
 				label={t("ribbonBar.previewMode.mode", "模式")}
