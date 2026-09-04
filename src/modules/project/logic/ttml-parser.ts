@@ -397,7 +397,13 @@ export function parseLyric(ttmlText: string): TTMLLyric {
 	let mainAgentId = "v1";
 
 	const metadata: TTMLMetadata[] = [];
-	const metaTags = ttmlDoc.getElementsByTagNameNS("*", "meta");
+	const rawMetaTags = ttmlDoc.getElementsByTagNameNS("*", "meta");
+	const metaTags =
+		rawMetaTags.length > 0
+			? rawMetaTags
+			: Array.from(ttmlDoc.querySelectorAll("*")).filter(
+					(el) => localName(el) === "meta",
+				);
 	for (let i = 0; i < metaTags.length; i++) {
 		const meta = metaTags[i];
 		if (localName(meta) === "meta") {
@@ -438,7 +444,13 @@ export function parseLyric(ttmlText: string): TTMLLyric {
 		}
 	}
 
-	const agents = ttmlDoc.getElementsByTagNameNS("*", "agent");
+	const rawAgents = ttmlDoc.getElementsByTagNameNS("*", "agent");
+	const agents =
+		rawAgents.length > 0
+			? rawAgents
+			: Array.from(ttmlDoc.querySelectorAll("*")).filter(
+					(el) => localName(el) === "agent",
+				);
 	for (let i = 0; i < agents.length; i++) {
 		const agent = agents[i];
 		if (getAttr(agent, "type") === "person") {
@@ -548,9 +560,9 @@ export function parseLyric(ttmlText: string): TTMLLyric {
 				});
 			} else if (wordNode.nodeType === Node.ELEMENT_NODE) {
 				const wordEl = wordNode as Element;
-				const role = wordEl.getAttribute("ttm:role");
+				const role = getAttr(wordEl, "role");
 
-				if (wordEl.nodeName === "span" && role) {
+				if (localName(wordEl).toLowerCase() === "span" && role) {
 					if (role === "x-bg") {
 						parseLineElement(
 							wordEl,
