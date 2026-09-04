@@ -104,7 +104,6 @@
 	.rt-BaseMenuItem[data-highlighted] {
 	background-color: var(--accent-9) !important;
 	color: var(--accent-contrast) !important;
->>>>>>> upstream/main
 }
 
 ::selection {
