@@ -11,6 +11,10 @@ import { currentTimeAtom } from "$/modules/audio/states/index.ts";
 import { getSynchronizableUnits } from "$/modules/lyric-editor/utils/lyric-states.ts";
 import { validateSections } from "$/modules/lyric-editor/utils/section-system.ts";
 import { exportLyricsfileText } from "$/modules/lyricsfile-processor";
+import {
+	activeProjectDirAtom,
+	activeProjectManifestAtom,
+} from "$/modules/project/folder-project/state";
 import { useFolderProject } from "$/modules/project/folder-project/useFolderProject";
 import exportTTMLText from "$/modules/project/logic/ttml-writer";
 import {
@@ -230,6 +234,16 @@ export const useTopMenuActions = () => {
 	}, [openFile]);
 
 	const onSaveFile = useCallback(async (): Promise<boolean> => {
+		// When working inside a folder project, saving persists the project draft directly
+		// without interrupting the user with "Untimed Lyrics" export warnings.
+		const hasActiveProject = Boolean(
+			store.get(activeProjectDirAtom) && store.get(activeProjectManifestAtom),
+		);
+		if (hasActiveProject) {
+			const shouldFallback = await saveFolderLyricsOnly();
+			if (!shouldFallback) return true;
+		}
+
 		const action = async (): Promise<boolean> => {
 			try {
 				const shouldFallback = await saveFolderLyricsOnly();

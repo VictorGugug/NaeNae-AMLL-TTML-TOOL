@@ -3,30 +3,47 @@ import {
     BackgroundRender,
     MeshGradientRenderer,
 } from "@applemusic-like-lyrics/react";
-import { useAtomValue } from "jotai";
+import "@applemusic-like-lyrics/core/style.css";
+import { useAtomValue, useSetAtom } from "jotai";
 import { memo, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { audioEngine } from "$/modules/audio/audio-engine";
-import { audioPlayingAtom } from "$/modules/audio/states/index.ts";
-import { isDarkThemeAtom, lyricLinesAtom } from "$/states/main.ts";
+import { audioCoverArtAtom, audioPlayingAtom, currentTimeAtom } from "$/modules/audio/states/index.ts";
+import { isDarkThemeAtom, lyricLinesAtom, selectedLinesAtom } from "$/states/main.ts";
 import { customBackgroundImageAtom } from "$/modules/settings/modals/customBackground";
+import { findMetadataCoverArt } from "$/utils/color-extract";
 import styles from "./AMLL.module.css";
 import classNames from "classnames";
 
 /**
  * @description The high-performance AMLL player utilizing the local rendering engine.
- * Features: Mesh Warp background, Optimized CSS culling, and Fluid typography.
+ * Features: Mesh Warp background, spring animation physics, and full Apple Music styling.
  */
 export const AMLL = memo(() => {
 	const { t } = useTranslation();
 	const lyrics = useAtomValue(lyricLinesAtom);
 	const darkMode = useAtomValue(isDarkThemeAtom);
-	const albumImg = useAtomValue(customBackgroundImageAtom);
+	const embeddedCoverArt = useAtomValue(audioCoverArtAtom);
+	const customBackgroundImage = useAtomValue(customBackgroundImageAtom);
 	const isPlaying = useAtomValue(audioPlayingAtom);
+	const setCurrentTimeAtom = useSetAtom(currentTimeAtom);
+	const setSelectedLines = useSetAtom(selectedLinesAtom);
+
+	const coverArtFromMetadata = useMemo(
+		() => findMetadataCoverArt(lyrics.metadata),
+		[lyrics.metadata],
+	);
+	const albumImg = embeddedCoverArt ?? coverArtFromMetadata ?? customBackgroundImage;
 
 	const amllLines = useMemo(() => {
-        return (lyrics?.lyricLines as any) || [];
-    }, [lyrics]);
+		if (!lyrics?.lyricLines) return [];
+		return lyrics.lyricLines.map((line) => ({
+			...line,
+			words: line.words || [],
+			startTime: line.startTime,
+			endTime: line.endTime,
+		}));
+	}, [lyrics]);
 
 	const [currentTime, setCurrentTime] = useState(0);
 
@@ -86,10 +103,18 @@ export const AMLL = memo(() => {
                         lyricLines={amllLines}
                         currentTime={currentTime}
                         className="amll-player-instance"
-                        enableSpring={false}
-                        enableBlur={false}
+                        enableSpring={true}
+                        enableBlur={true}
                         enableScale={true}
                         playing={isPlaying}
+                        onLyricLineClick={(clicked) => {
+                            const line = clicked?.line || clicked;
+                            if (line && typeof line.startTime === "number") {
+                                setCurrentTimeAtom(line.startTime);
+                                setSelectedLines(new Set([line.id]));
+                                audioEngine.seekMusic(line.startTime / 1000);
+                            }
+                        }}
                     />
                 ) : (
 					<div className={styles.noLyrics}>{t("amll.noLyrics", "No lyrics available in store")}</div>

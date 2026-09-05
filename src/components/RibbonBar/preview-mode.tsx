@@ -100,13 +100,7 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 					value={previewModeType}
 					onValueChange={(v) => {
 						if (v === PreviewModeType.AMLL) {
-							toast.warn(
-								t(
-									"ribbonBar.previewMode.amllDeprecated",
-									"AMLL 模式已弃用，请使用标准模式",
-								),
-							);
-							return;
+							setUseOriginalPreviewStyle(true);
 						}
 						setPreviewModeType(v as PreviewModeType);
 					}}
@@ -114,10 +108,7 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 					<SegmentedControl.Item value={PreviewModeType.Standard}>
 						{t("ribbonBar.previewMode.standard", "标准")}
 					</SegmentedControl.Item>
-					<SegmentedControl.Item
-						value={PreviewModeType.AMLL}
-						style={{ opacity: 0.5 }}
-					>
+					<SegmentedControl.Item value={PreviewModeType.AMLL}>
 						{"AMLL"}
 					</SegmentedControl.Item>
 					<SegmentedControl.Item value={PreviewModeType.Toxi}>

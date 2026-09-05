@@ -10,6 +10,7 @@ import {
 } from "$/modules/audio/states";
 import {
 	editorAutoScrollEnabledAtom,
+	previewFollowsPlaybackAtom,
 	previewModeTypeAtom,
 	PreviewModeType,
 } from "$/modules/settings/states/preview";
@@ -18,79 +19,8 @@ import { lyricLinesAtom, selectedLinesAtom } from "$/states/main.ts";
 import type { LyricLine, LyricWord } from "$/types/ttml";
 import { useKeyBindingAtom } from "$/utils/keybindings";
 import { msToTimestamp } from "$/utils/timestamp";
+import { smoothScrollContainer } from "$/utils/smooth-scroll";
 import styles from "./index.module.css";
-
-const easeInOutCubic = (x: number): number => {
-	return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
-};
-
-const smoothScrollContainer = (
-	element: HTMLElement,
-	targetScrollTop: number,
-	onStart?: () => void,
-	onFinish?: () => void,
-): (() => void) => {
-	const start = element.scrollTop;
-	const distance = targetScrollTop - start;
-	if (Math.abs(distance) < 2) return () => {};
-
-	const duration = Math.min(750, Math.max(350, Math.abs(distance) * 0.45));
-	const startTime = performance.now();
-	let cancelled = false;
-	let animId = 0;
-
-	onStart?.();
-
-	const cancel = () => {
-		if (cancelled) return;
-		cancelled = true;
-		if (animId) cancelAnimationFrame(animId);
-		cleanup();
-		onFinish?.();
-	};
-
-	const cleanup = () => {
-		element.removeEventListener("wheel", cancel, true);
-		element.removeEventListener("touchmove", cancel, true);
-		element.removeEventListener("touchstart", cancel, true);
-		element.removeEventListener("pointerdown", cancel, true);
-		element.removeEventListener("mousedown", cancel, true);
-		window.removeEventListener("wheel", cancel, true);
-		window.removeEventListener("touchmove", cancel, true);
-		window.removeEventListener("touchstart", cancel, true);
-		window.removeEventListener("pointerdown", cancel, true);
-		window.removeEventListener("mousedown", cancel, true);
-	};
-
-	element.addEventListener("wheel", cancel, { capture: true, passive: true });
-	element.addEventListener("touchmove", cancel, { capture: true, passive: true });
-	element.addEventListener("touchstart", cancel, { capture: true, passive: true });
-	element.addEventListener("pointerdown", cancel, { capture: true, passive: true });
-	element.addEventListener("mousedown", cancel, { capture: true, passive: true });
-	window.addEventListener("wheel", cancel, { capture: true, passive: true });
-	window.addEventListener("touchmove", cancel, { capture: true, passive: true });
-	window.addEventListener("touchstart", cancel, { capture: true, passive: true });
-	window.addEventListener("pointerdown", cancel, { capture: true, passive: true });
-	window.addEventListener("mousedown", cancel, { capture: true, passive: true });
-
-	const step = (now: number) => {
-		if (cancelled) return;
-		const elapsed = now - startTime;
-		const progress = Math.min(1, elapsed / duration);
-		const ease = easeInOutCubic(progress);
-		element.scrollTop = start + distance * ease;
-
-		if (progress < 1) {
-			animId = requestAnimationFrame(step);
-		} else {
-			cleanup();
-			onFinish?.();
-		}
-	};
-
-	animId = requestAnimationFrame(step);
-	return cancel;
-};
 
 const WordPill = memo(
 	({
@@ -368,27 +298,6 @@ const LineRow = memo(
 	},
 );
 
-const getActiveLine = (
-	lines: LyricLine[],
-	time: number,
-): LyricLine | undefined => {
-	if (lines.length === 0) return undefined;
-	const currentlyActive = lines.find(
-		(l) => time >= l.startTime && time <= l.endTime,
-	);
-	if (currentlyActive) return currentlyActive;
-
-	if (time < lines[0].startTime) return lines[0];
-
-	for (let i = lines.length - 1; i >= 0; i--) {
-		if (time >= lines[i].startTime) {
-			return lines[i];
-		}
-	}
-
-	return lines[0];
-};
-
 export const TimingOverview = memo(() => {
 	const { t } = useTranslation();
 	const lyrics = useAtomValue(lyricLinesAtom);
@@ -398,10 +307,8 @@ export const TimingOverview = memo(() => {
 	const setCurrentTime = useSetAtom(currentTimeAtom);
 	const setSelectedLines = useSetAtom(selectedLinesAtom);
 	const scrollRef = useRef<HTMLDivElement>(null);
-	const isInitialRef = useRef(true);
-	const lastScrolledIdRef = useRef<string | null>(null);
-	const userScrolledUntilRef = useRef<number>(0);
 	const autoScrollEnabled = useAtomValue(editorAutoScrollEnabledAtom);
+	const previewFollowsPlayback = useAtomValue(previewFollowsPlaybackAtom);
 	const previewMode = useAtomValue(previewModeTypeAtom);
 	const pauseUntilRef = useRef(0);
 	const lastActiveIndexRef = useRef<number>(-1);
@@ -427,38 +334,6 @@ export const TimingOverview = memo(() => {
 				: 0;
 		return { lineCount, wordCount, totalMs };
 	}, [lyricLines]);
-
-	const activeLine = useMemo(
-		() => getActiveLine(lyricLines, currentTime),
-		[lyricLines, currentTime],
-	);
-
-	const scrollToLine = useCallback((lineId: string, smooth = true) => {
-		const container = scrollRef.current;
-		if (!container) return;
-		const rowEl = container.querySelector(
-			`[data-line-id="${lineId}"]`,
-		) as HTMLElement | null;
-		if (!rowEl) return;
-		const targetScroll =
-			rowEl.offsetTop - container.clientHeight * 0.42 + rowEl.clientHeight / 2;
-		container.scrollTo({
-			top: Math.max(0, targetScroll),
-			behavior: smooth ? "smooth" : "auto",
-		});
-	}, []);
-
-	useEffect(() => {
-		if (!activeLine) return;
-		if (activeLine.id === lastScrolledIdRef.current) return;
-		const now = Date.now();
-		if (!isInitialRef.current && now < userScrolledUntilRef.current) return;
-
-		lastScrolledIdRef.current = activeLine.id;
-		const smooth = !isInitialRef.current;
-		scrollToLine(activeLine.id, smooth);
-		isInitialRef.current = false;
-	}, [activeLine, scrollToLine]);
 
 	const sortedLines = useMemo(() => [...lyricLines].sort((a, b) => a.startTime - b.startTime), [lyricLines]);
 
@@ -542,7 +417,8 @@ export const TimingOverview = memo(() => {
 	}, [sortedLines.length]);
 
 	useEffect(() => {
-		if (!autoScrollEnabled || !audioPlaying || selectedLines.size > 0) {
+		const shouldFollow = autoScrollEnabled || previewFollowsPlayback;
+		if (!shouldFollow || !audioPlaying || selectedLines.size > 0) {
 			activeScrollCancelRef.current?.();
 			activeScrollCancelRef.current = null;
 			lastActiveIndexRef.current = -1;
@@ -597,18 +473,15 @@ export const TimingOverview = memo(() => {
 				activeScrollCancelRef.current = null;
 			},
 		);
-	}, [autoScrollEnabled, audioPlaying, selectedLines.size, previewMode, currentTime, sortedLines]);
+	}, [autoScrollEnabled, previewFollowsPlayback, audioPlaying, selectedLines.size, previewMode, currentTime, sortedLines]);
 
 	const handleRowClick = useCallback(
 		(line: LyricLine) => {
 			setCurrentTime(line.startTime);
 			setSelectedLines(new Set([line.id]));
 			audioEngine.seekMusic(line.startTime / 1000);
-			userScrolledUntilRef.current = 0;
-			lastScrolledIdRef.current = line.id;
-			scrollToLine(line.id, true);
 		},
-		[setCurrentTime, setSelectedLines, scrollToLine],
+		[setCurrentTime, setSelectedLines],
 	);
 
 	return (
@@ -641,12 +514,6 @@ export const TimingOverview = memo(() => {
 			<div
 				className={styles.scrollArea}
 				ref={scrollRef}
-				onWheel={() => {
-					userScrolledUntilRef.current = Date.now() + 3000;
-				}}
-				onTouchStart={() => {
-					userScrolledUntilRef.current = Date.now() + 3000;
-				}}
 			>
 				<div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
 					<div

@@ -85,77 +85,7 @@ import {
 	shouldAutoCenterSelection,
 } from "./selection-scroll";
 
-const easeInOutCubic = (x: number): number => {
-	return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
-};
-
-const smoothScrollContainer = (
-	element: HTMLElement,
-	targetScrollTop: number,
-	onStart?: () => void,
-	onFinish?: () => void,
-): (() => void) => {
-	const start = element.scrollTop;
-	const distance = targetScrollTop - start;
-	if (Math.abs(distance) < 2) return () => {};
-
-	const duration = Math.min(750, Math.max(350, Math.abs(distance) * 0.45));
-	const startTime = performance.now();
-	let cancelled = false;
-	let animId = 0;
-
-	onStart?.();
-
-	const cancel = () => {
-		if (cancelled) return;
-		cancelled = true;
-		if (animId) cancelAnimationFrame(animId);
-		cleanup();
-		onFinish?.();
-	};
-
-	const cleanup = () => {
-		element.removeEventListener("wheel", cancel, true);
-		element.removeEventListener("touchmove", cancel, true);
-		element.removeEventListener("touchstart", cancel, true);
-		element.removeEventListener("pointerdown", cancel, true);
-		element.removeEventListener("mousedown", cancel, true);
-		window.removeEventListener("wheel", cancel, true);
-		window.removeEventListener("touchmove", cancel, true);
-		window.removeEventListener("touchstart", cancel, true);
-		window.removeEventListener("pointerdown", cancel, true);
-		window.removeEventListener("mousedown", cancel, true);
-	};
-
-	element.addEventListener("wheel", cancel, { capture: true, passive: true });
-	element.addEventListener("touchmove", cancel, { capture: true, passive: true });
-	element.addEventListener("touchstart", cancel, { capture: true, passive: true });
-	element.addEventListener("pointerdown", cancel, { capture: true, passive: true });
-	element.addEventListener("mousedown", cancel, { capture: true, passive: true });
-	window.addEventListener("wheel", cancel, { capture: true, passive: true });
-	window.addEventListener("touchmove", cancel, { capture: true, passive: true });
-	window.addEventListener("touchstart", cancel, { capture: true, passive: true });
-	window.addEventListener("pointerdown", cancel, { capture: true, passive: true });
-	window.addEventListener("mousedown", cancel, { capture: true, passive: true });
-
-	const step = (now: number) => {
-		if (cancelled) return;
-		const elapsed = now - startTime;
-		const progress = Math.min(1, elapsed / duration);
-		const ease = easeInOutCubic(progress);
-		element.scrollTop = start + distance * ease;
-
-		if (progress < 1) {
-			animId = requestAnimationFrame(step);
-		} else {
-			cleanup();
-			onFinish?.();
-		}
-	};
-
-	animId = requestAnimationFrame(step);
-	return cancel;
-};
+import { smoothScrollContainer } from "$/utils/smooth-scroll";
 
 const lyricLinesOnlyAtom = splitAtom(
 	focusAtom(lyricLinesAtom, (o) => o.prop("lyricLines")),
@@ -722,16 +652,7 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 		const raf = requestAnimationFrame(() => scrollToLineIndex(index, true));
 		return () => cancelAnimationFrame(raf);
 	}, [toolMode, previewFollowsPlayback, scrollToLineIndex, store]);
-	const handleLocate = useCallback(() => {
-		const cur = store.get(currentTimeAtom);
-		const lyricLines = store.get(lyricLinesAtom).lyricLines;
-		const index = findCurrentLineIndex(lyricLines, cur);
-		if (index === -1) return;
-
-		store.set(selectedLinesAtom, new Set());
-		pauseUntilRef.current = 0;
-		lastActiveLineIndexRef.current = -1;
-
+	const scrollToLineSmooth = useCallback((index: number) => {
 		const viewEl = viewElRef.current;
 		if (!viewEl) return;
 		const visibleIndex = visibleItems.findIndex((item) => item.sourceIndex === index);
@@ -764,46 +685,43 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 				activeScrollCancelRef.current = null;
 			},
 		);
-	}, [store, visibleItems]);
+	}, [visibleItems]);
+
+	const handleLocate = useCallback(() => {
+		const cur = store.get(currentTimeAtom);
+		const lyricLines = store.get(lyricLinesAtom).lyricLines;
+		const index = findCurrentLineIndex(lyricLines, cur);
+		if (index === -1) return;
+
+		store.set(selectedLinesAtom, new Set());
+		pauseUntilRef.current = 0;
+		lastActiveLineIndexRef.current = index;
+		scrollToLineSmooth(index);
+	}, [store, scrollToLineSmooth]);
+
+	useKeyBindingAtom(keyLocateActiveLineAtom, handleLocate, [handleLocate]);
 
 	useEffect(() => {
 		if (toolMode !== ToolMode.Edit && toolMode !== ToolMode.Sync) return;
 
-		const syncPosition = (force = false) => {
-			if (!previewFollowsPlayback && audioEngine.musicPlaying) return;
-			const effectiveTime = audioEngine.musicPlaying
+		const onSeek = () => {
+			if (!autoScrollEnabled && !previewFollowsPlayback) return;
+			if (selectedLines.size > 0) return;
+			const cur = audioEngine.musicPlaying
 				? audioEngine.musicCurrentTime * 1000
 				: store.get(currentTimeAtom);
 			const lyricLines = store.get(lyricLinesAtom).lyricLines;
-			const index = findCurrentLineIndex(lyricLines, effectiveTime);
-			if (index !== -1 && (force || index !== lastActiveLineIndexRef.current)) {
-				lastActiveLineIndexRef.current = index;
-				scrollToLineIndex(index, force);
-			}
+			const index = findCurrentLineIndex(lyricLines, cur);
+			if (index === -1) return;
+			lastActiveLineIndexRef.current = index;
+			scrollToLineSmooth(index);
 		};
 
-		syncPosition(true);
-
-		const onTimeUpdate = () => {
-			if (audioEngine.musicPlaying && previewFollowsPlayback) {
-				syncPosition(false);
-			}
-		};
-
-		const onSeek = () => syncPosition(true);
-
-		audioEngine.addEventListener("music-timeupdate", onTimeUpdate);
 		audioEngine.addEventListener("music-seeked", onSeek);
-		audioEngine.addEventListener("music-resume", onTimeUpdate);
-
 		return () => {
-			audioEngine.removeEventListener("music-timeupdate", onTimeUpdate);
 			audioEngine.removeEventListener("music-seeked", onSeek);
-			audioEngine.removeEventListener("music-resume", onTimeUpdate);
 		};
-	}, [toolMode, previewFollowsPlayback, scrollToLineIndex, store]);
-
-	useKeyBindingAtom(keyLocateActiveLineAtom, handleLocate, [handleLocate]);
+	}, [toolMode, autoScrollEnabled, previewFollowsPlayback, selectedLines.size, scrollToLineSmooth, store]);
 
 	useEffect(() => {
 		const onUserInteraction = () => {
@@ -842,7 +760,8 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 	}, [editLyric.length]);
 
 	useEffect(() => {
-		if (!autoScrollEnabled || !audioPlaying || selectedLines.size > 0) {
+		const shouldFollow = autoScrollEnabled || previewFollowsPlayback;
+		if (!shouldFollow || !audioPlaying || selectedLines.size > 0) {
 			activeScrollCancelRef.current?.();
 			activeScrollCancelRef.current = null;
 			lastActiveLineIndexRef.current = -1;
@@ -868,39 +787,17 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 		if (index === lastActiveLineIndexRef.current) return;
 		lastActiveLineIndexRef.current = index;
 
-		const viewEl = viewElRef.current;
-		if (!viewEl) return;
-		const visibleIndex = visibleItems.findIndex((item) => item.sourceIndex === index);
-		if (visibleIndex === -1) return;
-
-		let target = 0;
-		const el = viewEl.querySelector(`[data-lyric-line-index="${index}"]`) as HTMLElement | null;
-		if (el) {
-			target =
-				el.getBoundingClientRect().top -
-				viewEl.getBoundingClientRect().top +
-				viewEl.scrollTop -
-				viewEl.clientHeight * 0.4 +
-				el.clientHeight / 2;
-		} else {
-			const totalItems = Math.max(1, visibleItems.length);
-			const avgHeight = Math.max(50, viewEl.scrollHeight / totalItems);
-			target = visibleIndex * avgHeight - viewEl.clientHeight * 0.4 + avgHeight / 2;
-		}
-
-		activeScrollCancelRef.current?.();
-		activeScrollCancelRef.current = smoothScrollContainer(
-			viewEl,
-			Math.max(0, target),
-			() => {
-				isProgrammaticScrollingRef.current = true;
-			},
-			() => {
-				isProgrammaticScrollingRef.current = false;
-				activeScrollCancelRef.current = null;
-			},
-		);
-	}, [autoScrollEnabled, audioPlaying, selectedLines.size, currentTime, toolMode, store, visibleItems]);
+		scrollToLineSmooth(index);
+	}, [
+		autoScrollEnabled,
+		previewFollowsPlayback,
+		audioPlaying,
+		selectedLines.size,
+		currentTime,
+		toolMode,
+		store,
+		scrollToLineSmooth,
+	]);
 
 	useImperativeHandle(ref, () => viewElRef.current as HTMLDivElement, []);
 

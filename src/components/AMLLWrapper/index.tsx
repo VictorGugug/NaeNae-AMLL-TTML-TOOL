@@ -5,6 +5,7 @@ import { audioEngine } from "$/modules/audio/audio-engine";
 import {
 	currentTimeAtom,
 	audioCoverArtAtom,
+	audioPlayingAtom,
 } from "$/modules/audio/states/index.ts";
 import {
 	showRomanLinesAtom,
@@ -14,7 +15,9 @@ import {
 	lyricWordFadeWidthAtom,
 	instantHighlightFadeAtom,
 	spicyBackgroundModeAtom,
+	previewFollowsPlaybackAtom,
 } from "$/modules/settings/states/preview";
+import { smoothScrollContainer } from "$/utils/smooth-scroll";
 import {
 	isDarkThemeAtom,
 	lyricLinesAtom,
@@ -256,8 +259,13 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 	const setCurrentTime = useSetAtom(currentTimeAtom);
 	const setSelectedLines = useSetAtom(selectedLinesAtom);
 
+	const previewFollowsPlayback = useAtomValue(previewFollowsPlaybackAtom);
+	const audioPlaying = useAtomValue(audioPlayingAtom);
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const lastScrolledId = useRef<string | null>(null);
+	const pauseUntilRef = useRef(0);
+	const isProgrammaticScrollingRef = useRef(false);
+	const activeScrollCancelRef = useRef<(() => void) | null>(null);
 
 	// Group lines: in the AMLL data format, a BG vocal line (isBG: true) is
 	// ALWAYS placed immediately after its parent main line in the sorted array.
@@ -284,8 +292,52 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 		return groups;
 	}, [lyrics.lyricLines]);
 
+	useEffect(() => {
+		const onUserInteraction = () => {
+			activeScrollCancelRef.current?.();
+			activeScrollCancelRef.current = null;
+			isProgrammaticScrollingRef.current = false;
+			pauseUntilRef.current = performance.now() + 3500;
+			lastScrolledId.current = null;
+		};
+		const onScroll = () => {
+			if (isProgrammaticScrollingRef.current) return;
+			activeScrollCancelRef.current?.();
+			activeScrollCancelRef.current = null;
+			pauseUntilRef.current = performance.now() + 3500;
+			lastScrolledId.current = null;
+		};
+
+		const container = scrollContainerRef.current;
+		container?.addEventListener("scroll", onScroll, { passive: true });
+		window.addEventListener("wheel", onUserInteraction, { capture: true, passive: true });
+		window.addEventListener("touchmove", onUserInteraction, { capture: true, passive: true });
+		window.addEventListener("touchstart", onUserInteraction, { capture: true, passive: true });
+		window.addEventListener("pointerdown", onUserInteraction, { capture: true, passive: true });
+		window.addEventListener("mousedown", onUserInteraction, { capture: true, passive: true });
+
+		return () => {
+			activeScrollCancelRef.current?.();
+			activeScrollCancelRef.current = null;
+			container?.removeEventListener("scroll", onScroll);
+			window.removeEventListener("wheel", onUserInteraction, true);
+			window.removeEventListener("touchmove", onUserInteraction, true);
+			window.removeEventListener("touchstart", onUserInteraction, true);
+			window.removeEventListener("pointerdown", onUserInteraction, true);
+			window.removeEventListener("mousedown", onUserInteraction, true);
+		};
+	}, []);
+
 	// Scroll to the active group
 	useEffect(() => {
+		if (!previewFollowsPlayback || !audioPlaying) {
+			activeScrollCancelRef.current?.();
+			activeScrollCancelRef.current = null;
+			lastScrolledId.current = null;
+			return;
+		}
+		if (performance.now() < pauseUntilRef.current) return;
+
 		const activeGroupIndex = lineGroups.findIndex(
 			g => (displayTime >= g.main.startTime && displayTime <= g.main.endTime) ||
 				g.bg.some(b => displayTime >= b.startTime && displayTime <= b.endTime)
@@ -304,11 +356,22 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 				// Anchor closer to the top (was 0.40) so the active line stays clear
 				// of the bottom edge of this panel, which sits right above the
 				// spectrogram — previously the line could end up hidden behind it.
-				const targetScroll = groupEl.offsetTop - (container.clientHeight * 0.30) + (groupEl.clientHeight / 2);
-				container.scrollTo({ top: targetScroll, behavior: "smooth" });
+				const targetScroll = Math.max(0, groupEl.offsetTop - (container.clientHeight * 0.30) + (groupEl.clientHeight / 2));
+				activeScrollCancelRef.current?.();
+				activeScrollCancelRef.current = smoothScrollContainer(
+					container,
+					targetScroll,
+					() => {
+						isProgrammaticScrollingRef.current = true;
+					},
+					() => {
+						isProgrammaticScrollingRef.current = false;
+						activeScrollCancelRef.current = null;
+					},
+				);
 			}
 		}
-	}, [displayTime, lineGroups]);
+	}, [displayTime, lineGroups, previewFollowsPlayback, audioPlaying]);
 
 	const handleLineClick = (line: any) => {
 		setCurrentTime(line.startTime);

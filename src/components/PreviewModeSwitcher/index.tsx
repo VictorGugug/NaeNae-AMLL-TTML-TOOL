@@ -17,14 +17,17 @@ export const PreviewModeSwitcher = () => {
 	const previewModeType = useAtomValue(previewModeTypeAtom);
 	const useOriginalPreviewStyle = useAtomValue(useOriginalPreviewStyleAtom);
 
+	const shouldUseOriginal =
+		useOriginalPreviewStyle || previewModeType === PreviewModeType.AMLL;
+
 	return (
 		<Suspense fallback={<SuspensePlaceHolder />}>
 			{previewModeType === PreviewModeType.Standard && (
-				<AMLLWrapper variant="standard" />
+				shouldUseOriginal ? <AMLL /> : <AMLLWrapper variant="standard" />
 			)}
 			{previewModeType === PreviewModeType.AMLL && <AMLL />}
 			{previewModeType === PreviewModeType.Toxi && (
-				<AMLLWrapper variant="toxi" />
+				shouldUseOriginal ? <AMLL /> : <AMLLWrapper variant="toxi" />
 			)}
 			{previewModeType === PreviewModeType.Spicy && <SpicyLyrics />}
 			{previewModeType === PreviewModeType.Timing && <TimingOverview />}

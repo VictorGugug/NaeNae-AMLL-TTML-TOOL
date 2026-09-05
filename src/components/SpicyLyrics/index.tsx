@@ -21,6 +21,7 @@ import {
 	useCustomAccentAtom,
 } from "$/modules/settings/states";
 import {
+	previewFollowsPlaybackAtom,
 	showFpsCounterAtom,
 	showRomanLinesAtom,
 	showTranslationLinesAtom,
@@ -30,6 +31,7 @@ import {
 } from "$/modules/settings/states/preview";
 import { lyricLinesAtom } from "$/states/main";
 import { findMetadataCoverArt } from "$/utils/color-extract";
+import { smoothScrollContainer } from "$/utils/smooth-scroll";
 import styles from "./index.module.css";
 import { SpicyBackground, useCoverPalette } from "./SpicyBackground";
 import { CubicSpline, progressAt, Spring, stateAt } from "./math";
@@ -129,6 +131,7 @@ export const SpicyLyrics = memo(() => {
 	const romanized = useAtomValue(showRomanLinesAtom);
 	const showTranslation = useAtomValue(showTranslationLinesAtom);
 	const showFps = useAtomValue(showFpsCounterAtom);
+	const previewFollowsPlayback = useAtomValue(previewFollowsPlaybackAtom);
 	const backgroundMode = useAtomValue(spicyBackgroundModeAtom);
 	const embeddedCoverArt = useAtomValue(audioCoverArtAtom);
 	const customBackgroundImage = useAtomValue(customBackgroundImageAtom);
@@ -164,6 +167,8 @@ export const SpicyLyrics = memo(() => {
 	const scrollPauseUntil = useRef(0);
 	const lastLine = useRef<string | null>(null);
 	const lastTime = useRef(performance.now());
+	const activeScrollCancelRef = useRef<(() => void) | null>(null);
+	const isProgrammaticScrollingRef = useRef(false);
 	const [fps, setFps] = useState(0);
 	const fpsRef = useRef({ frames: 0, lastTime: performance.now() });
 	const showFpsRef = useRef(showFps);
@@ -186,16 +191,38 @@ export const SpicyLyrics = memo(() => {
 	}, [simple]);
 
 	useEffect(() => {
-		const viewport = viewportRef.current;
-		if (!viewport) return;
-		const onUserScroll = () => {
-			scrollPauseUntil.current = performance.now() + 750;
+		const onUserInteraction = () => {
+			activeScrollCancelRef.current?.();
+			activeScrollCancelRef.current = null;
+			isProgrammaticScrollingRef.current = false;
+			scrollPauseUntil.current = performance.now() + 3500;
+			lastLine.current = null;
 		};
-		viewport.addEventListener("wheel", onUserScroll, { passive: true });
-		viewport.addEventListener("touchmove", onUserScroll, { passive: true });
+		const onScroll = () => {
+			if (isProgrammaticScrollingRef.current) return;
+			activeScrollCancelRef.current?.();
+			activeScrollCancelRef.current = null;
+			scrollPauseUntil.current = performance.now() + 3500;
+			lastLine.current = null;
+		};
+
+		const viewport = viewportRef.current;
+		viewport?.addEventListener("scroll", onScroll, { passive: true });
+		window.addEventListener("wheel", onUserInteraction, { capture: true, passive: true });
+		window.addEventListener("touchmove", onUserInteraction, { capture: true, passive: true });
+		window.addEventListener("touchstart", onUserInteraction, { capture: true, passive: true });
+		window.addEventListener("pointerdown", onUserInteraction, { capture: true, passive: true });
+		window.addEventListener("mousedown", onUserInteraction, { capture: true, passive: true });
+
 		return () => {
-			viewport.removeEventListener("wheel", onUserScroll);
-			viewport.removeEventListener("touchmove", onUserScroll);
+			activeScrollCancelRef.current?.();
+			activeScrollCancelRef.current = null;
+			viewport?.removeEventListener("scroll", onScroll);
+			window.removeEventListener("wheel", onUserInteraction, true);
+			window.removeEventListener("touchmove", onUserInteraction, true);
+			window.removeEventListener("touchstart", onUserInteraction, true);
+			window.removeEventListener("pointerdown", onUserInteraction, true);
+			window.removeEventListener("mousedown", onUserInteraction, true);
 		};
 	}, []);
 
@@ -686,7 +713,8 @@ export const SpicyLyrics = memo(() => {
 				scrollNode &&
 				viewport &&
 				(shouldForce ||
-					(now > scrollPauseUntil.current &&
+					(previewFollowsPlayback &&
+						now > scrollPauseUntil.current &&
 						visible &&
 						lastLine.current !== scrollTarget.id))
 			) {
@@ -702,18 +730,39 @@ export const SpicyLyrics = memo(() => {
 							30,
 					),
 				);
-				viewport.scrollTo({
-					top: target,
-					behavior: shouldForce ? "auto" : "smooth",
-				});
+				if (shouldForce) {
+					activeScrollCancelRef.current?.();
+					activeScrollCancelRef.current = null;
+					viewport.scrollTo({
+						top: target,
+						behavior: "auto",
+					});
+				} else {
+					activeScrollCancelRef.current?.();
+					activeScrollCancelRef.current = smoothScrollContainer(
+						viewport,
+						target,
+						() => {
+							isProgrammaticScrollingRef.current = true;
+						},
+						() => {
+							isProgrammaticScrollingRef.current = false;
+							activeScrollCancelRef.current = null;
+						},
+					);
+				}
 				lastLine.current = scrollTarget.id;
 			}
 			previousPosition = time;
 			raf = requestAnimationFrame(animate);
 		};
 		raf = requestAnimationFrame(animate);
-		return () => cancelAnimationFrame(raf);
-	}, [lines, simple]);
+		return () => {
+			cancelAnimationFrame(raf);
+			activeScrollCancelRef.current?.();
+			activeScrollCancelRef.current = null;
+		};
+	}, [lines, simple, previewFollowsPlayback]);
 
 	const seek = (time: number) => {
 		setCurrentTime(time);
