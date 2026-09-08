@@ -37,8 +37,8 @@ import {
 	syllableSmoothingFactorAtom,
 	timeStretchAlgorithmAtom,
 	translationTypeAtom,
-	vsyncAtom,
 	useOriginalPreviewStyleAtom,
+	vsyncAtom,
 } from "$/modules/settings/states/preview";
 import { RibbonFrame, RibbonSection } from "./common";
 import { advancedRibbonControlsAtom } from "$/modules/onboarding/states";
@@ -100,7 +100,15 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 					value={previewModeType}
 					onValueChange={(v) => {
 						if (v === PreviewModeType.AMLL) {
+							toast.warn(
+								t(
+									"ribbonBar.previewMode.amllDeprecated",
+									"AMLL 模式已弃用，请使用标准模式",
+								),
+							);
 							setUseOriginalPreviewStyle(true);
+							setPreviewModeType(PreviewModeType.Standard);
+							return;
 						}
 						setPreviewModeType(v as PreviewModeType);
 					}}
@@ -108,7 +116,10 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 					<SegmentedControl.Item value={PreviewModeType.Standard}>
 						{t("ribbonBar.previewMode.standard", "标准")}
 					</SegmentedControl.Item>
-					<SegmentedControl.Item value={PreviewModeType.AMLL}>
+					<SegmentedControl.Item
+						value={PreviewModeType.AMLL}
+						style={{ opacity: 0.5 }}
+					>
 						{"AMLL"}
 					</SegmentedControl.Item>
 					<SegmentedControl.Item value={PreviewModeType.Toxi}>
@@ -238,7 +249,24 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 					/>
 				</Grid>
 			</RibbonSection>
-{showAdvanced && <RibbonSection
+			<RibbonSection isSidebar={isSidebar} label={t("ribbonBar.previewStyle", "Preview Style")}>
+				<Grid
+					columns="max-content auto"
+					gap="2"
+					gapY="1"
+					flexGrow="1"
+					align="center"
+				>
+					<Text wrap="nowrap" size="1" style={{ color: "var(--ribbon-label-color)" }}>
+						{t("ribbonBar.previewStyle.original", "Original preview style")}
+					</Text>
+					<Checkbox
+						checked={useOriginalPreviewStyle}
+						onCheckedChange={(v) => setUseOriginalPreviewStyle(!!v)}
+					/>
+				</Grid>
+			</RibbonSection>
+			{showAdvanced && <RibbonSection
 				isSidebar={isSidebar}
 				label={t("ribbonBar.previewMode.render", "渲染")}
 			>
@@ -255,7 +283,7 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 					<Checkbox checked={vsync} onCheckedChange={(v) => setVsync(!!v)} />
 				</Grid>
 			</RibbonSection>}
-			{showAdvanced && <RibbonSection isSidebar={isSidebar} label={t("ribbonBar.previewStyle", "Preview Style")}>
+			{showAdvanced && <RibbonSection isSidebar={isSidebar} label={t("ribbonBar.previewMode.dev", "Dev")}>
 				<Grid
 					columns="max-content auto"
 					gap="2"
@@ -264,19 +292,17 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 					align="center"
 				>
 					<Text wrap="nowrap" size="1" style={{ color: "var(--ribbon-label-color)" }}>
-						{t("ribbonBar.previewStyle.original", "Original preview style")}
+						{t("ribbonBar.previewMode.showFps", "Show FPS")}
 					</Text>
 					<Checkbox
-						checked={useOriginalPreviewStyle}
-						onCheckedChange={(v) => setUseOriginalPreviewStyle(!!v)}
+						checked={showFps}
+						onCheckedChange={(v) => setShowFps(!!v)}
 					/>
 				</Grid>
 			</RibbonSection>}
-{showAdvanced && (
-				<RibbonSection isSidebar={isSidebar} label={t("ribbonBar.advanced", "Advanced")}>
-					<Switch checked={showAdvanced} onCheckedChange={setShowAdvanced} />
-				</RibbonSection>
-			)}
+			<RibbonSection label={t("ribbonBar.advanced", "Advanced")} isSidebar={isSidebar}>
+				<Switch checked={showAdvanced} onCheckedChange={setShowAdvanced} />
+			</RibbonSection>
 		</RibbonFrame>
 	);
 });

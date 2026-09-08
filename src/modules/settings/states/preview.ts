@@ -54,7 +54,7 @@ export const previewFollowsPlaybackAtom = atomWithStorage(
 
 export const useOriginalPreviewStyleAtom = atomWithStorage(
 	"useOriginalPreviewStyle",
-	false,
+	true,
 );
 
 export enum TimeStretchAlgorithm {
