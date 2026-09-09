@@ -8,6 +8,8 @@ import {
 	audioPlayingAtom,
 } from "$/modules/audio/states/index.ts";
 import {
+	PreviewModeType,
+	originalPreviewStyleByModeAtom,
 	showRomanLinesAtom,
 	showTranslationLinesAtom,
 	vsyncAtom,
@@ -292,8 +294,17 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 		return groups;
 	}, [lyrics.lyricLines]);
 
+	const displayTimeRef = useRef(displayTime);
+	displayTimeRef.current = displayTime;
+	const lineGroupsRef = useRef(lineGroups);
+	lineGroupsRef.current = lineGroups;
+
 	useEffect(() => {
-		const onUserInteraction = () => {
+		const onUserInteraction = (e: Event) => {
+			const container = scrollContainerRef.current;
+			if (e.target && container && !container.contains(e.target as Node)) {
+				return;
+			}
 			activeScrollCancelRef.current?.();
 			activeScrollCancelRef.current = null;
 			isProgrammaticScrollingRef.current = false;
@@ -328,6 +339,41 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 		};
 	}, []);
 
+	// Real-time ResizeObserver: adapts the scroll position instantaneously whenever the container
+	// resizes (such as dragging the spectrogram resize handle, expanding/collapsing the spectrogram, or window resize)
+	useEffect(() => {
+		const container = scrollContainerRef.current;
+		if (!container) return;
+
+		const resizeObserver = new ResizeObserver(() => {
+			if (!container) return;
+			const curTime = displayTimeRef.current;
+			const groups = lineGroupsRef.current;
+			const activeIndex = groups.findIndex(
+				g => (curTime >= g.main.startTime && curTime <= g.main.endTime) ||
+					g.bg.some(b => curTime >= b.startTime && curTime <= b.endTime)
+			);
+			if (activeIndex === -1) return;
+
+			// +1 because of paddingTop element at index 0
+			const groupEl = container.children[activeIndex + 1] as HTMLElement;
+			if (!groupEl) return;
+
+			const targetScroll = Math.max(
+				0,
+				groupEl.offsetTop - (container.clientHeight * 0.32) + (groupEl.clientHeight / 2)
+			);
+
+			// Direct update during container resize ensures zero lag when dragging the spectrogram handle
+			activeScrollCancelRef.current?.();
+			activeScrollCancelRef.current = null;
+			container.scrollTop = targetScroll;
+		});
+
+		resizeObserver.observe(container);
+		return () => resizeObserver.disconnect();
+	}, []);
+
 	// Scroll to the active group
 	useEffect(() => {
 		if (!previewFollowsPlayback || !audioPlaying) {
@@ -350,13 +396,12 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 
 		const container = scrollContainerRef.current;
 		if (container) {
-			// +1 because of the <div className={styles.padding} /> at index 0
+			// +1 because of the <div className={styles.paddingTop} /> at index 0
 			const groupEl = container.children[activeGroupIndex + 1] as HTMLElement;
 			if (groupEl) {
-				// Anchor closer to the top (was 0.40) so the active line stays clear
-				// of the bottom edge of this panel, which sits right above the
-				// spectrogram — previously the line could end up hidden behind it.
-				const targetScroll = Math.max(0, groupEl.offsetTop - (container.clientHeight * 0.30) + (groupEl.clientHeight / 2));
+				// Anchor at 32% from the top so the active line stays well clear
+				// of the bottom edge of this panel and the spectrogram below.
+				const targetScroll = Math.max(0, groupEl.offsetTop - (container.clientHeight * 0.32) + (groupEl.clientHeight / 2));
 				activeScrollCancelRef.current?.();
 				activeScrollCancelRef.current = smoothScrollContainer(
 					container,
@@ -401,11 +446,16 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 	const backgroundImage = embeddedCoverArt ?? coverArtFromMetadata ?? customBackgroundImage;
 	const coverPalette = useCoverPalette(backgroundImage);
 
+	const originalPreviewStyleByMode = useAtomValue(originalPreviewStyleByModeAtom);
+	const modeKey = isToxi ? PreviewModeType.Toxi : PreviewModeType.Standard;
+	const isOriginal = originalPreviewStyleByMode?.[modeKey] ?? (modeKey === PreviewModeType.Toxi);
+
 	return (
 		<div className={classNames(
 			styles.amllWrapper, 
 			darkMode && styles.isDark, 
 			isToxi && styles.isToxi,
+			isOriginal && styles.isOriginal,
 			instantFade && styles.hasInstantFade
 		)}
 		style={{
@@ -414,12 +464,16 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 			"--spicy-cover-highlight": coverPalette?.highlight,
 		} as CSSProperties}
 		>
-			{/* SpicyBackground — animated album art warp */}
-			<SpicyBackground
-				backgroundMode={backgroundMode}
-				backgroundImage={backgroundImage}
-				accentColor={accentColor}
-			/>
+			{/* Background */}
+			{isOriginal ? (
+				<div className={styles.originalBg} />
+			) : (
+				<SpicyBackground
+					backgroundMode={backgroundMode}
+					backgroundImage={backgroundImage}
+					accentColor={accentColor}
+				/>
+			)}
 			<div className={styles.contentOverlay}>
 				<div className={styles.header}>
 					<h3>{projectIdentity.name || "Untitled"}</h3>
@@ -427,7 +481,7 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 				</div>
 
 				<div className={styles.lyricsViewport} ref={scrollContainerRef}>
-					<div className={styles.padding} />
+					<div className={styles.paddingTop} />
 					{lineGroups.map((group) => (
 						<LineGroupView
 							key={group.main.id}
@@ -436,7 +490,7 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 							onWordClick={handleWordClick}
 						/>
 					))}
-					<div className={styles.padding} />
+					<div className={styles.paddingBottom} />
 				</div>
 			</div>
 			{showFps && (

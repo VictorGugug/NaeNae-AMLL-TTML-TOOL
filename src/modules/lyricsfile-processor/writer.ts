@@ -90,10 +90,10 @@ function buildWord(word: LyricLine["words"][number]): LyricsfileWord {
 				end_ms: Math.round(ruby.endTime),
 			} as unknown as NonNullable<NonNullable<LyricsfileWord["segments"]>[number]>;
 			if (ruby.romanWord && ruby.romanWord.trim().length > 0) {
-				(seg as Record<string, unknown>).transliteration = ruby.romanWord;
+				(seg as unknown as Record<string, unknown>).transliteration = ruby.romanWord;
 			}
 			if (ruby.translation && ruby.translation.trim().length > 0) {
-				(seg as Record<string, unknown>).translation = ruby.translation;
+				(seg as unknown as Record<string, unknown>).translation = ruby.translation;
 			}
 			return seg;
 		});
@@ -106,10 +106,10 @@ function buildWord(word: LyricLine["words"][number]): LyricsfileWord {
 				end_ms: Math.round(seg.endTime),
 			};
 			if (seg.romanWord && seg.romanWord.trim().length > 0) {
-				(s as Record<string, unknown>).transliteration = seg.romanWord;
+				(s as unknown as Record<string, unknown>).transliteration = seg.romanWord;
 			}
 			if (seg.translation && seg.translation.trim().length > 0) {
-				(s as Record<string, unknown>).translation = seg.translation;
+				(s as unknown as Record<string, unknown>).translation = seg.translation;
 			}
 			return s;
 		});
@@ -122,13 +122,6 @@ function buildWord(word: LyricLine["words"][number]): LyricsfileWord {
 		}
 	}
 	return out;
-}
-
-function hasRuby(word: LyricLine["words"][number]): boolean {
-	return (
-		(Array.isArray(word.ruby) && word.ruby.length > 0) ||
-		(Array.isArray(word.segments) && word.segments.length > 0)
-	);
 }
 
 function buildWords(words: LyricLine["words"]): LyricsfileWord[] | undefined {

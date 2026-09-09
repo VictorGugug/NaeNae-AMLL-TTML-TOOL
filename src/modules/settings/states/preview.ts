@@ -1,3 +1,4 @@
+import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 
 export enum PreviewModeType {
@@ -52,9 +53,30 @@ export const previewFollowsPlaybackAtom = atomWithStorage(
 	true,
 );
 
-export const useOriginalPreviewStyleAtom = atomWithStorage(
-	"useOriginalPreviewStyle",
-	true,
+export const originalPreviewStyleByModeAtom = atomWithStorage<Record<string, boolean>>(
+	"originalPreviewStyleByMode",
+	{
+		[PreviewModeType.Standard]: false,
+		[PreviewModeType.Toxi]: true,
+	},
+);
+
+export const useOriginalPreviewStyleAtom = atom(
+	(get) => {
+		const mode = get(previewModeTypeAtom);
+		const map = get(originalPreviewStyleByModeAtom);
+		return map?.[mode] ?? (mode === PreviewModeType.Toxi);
+	},
+	(get, set, update: boolean | ((prev: boolean) => boolean)) => {
+		const mode = get(previewModeTypeAtom);
+		const map = get(originalPreviewStyleByModeAtom) ?? {};
+		const current = map[mode] ?? (mode === PreviewModeType.Toxi);
+		const next = typeof update === "function" ? update(current) : update;
+		set(originalPreviewStyleByModeAtom, {
+			...map,
+			[mode]: next,
+		});
+	},
 );
 
 export enum TimeStretchAlgorithm {

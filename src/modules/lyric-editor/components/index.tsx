@@ -724,7 +724,11 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 	}, [toolMode, autoScrollEnabled, previewFollowsPlayback, selectedLines.size, scrollToLineSmooth, store]);
 
 	useEffect(() => {
-		const onUserInteraction = () => {
+		const onUserInteraction = (e: Event) => {
+			const el = viewElRef.current;
+			if (e.target && el && !el.contains(e.target as Node)) {
+				return;
+			}
 			activeScrollCancelRef.current?.();
 			activeScrollCancelRef.current = null;
 			isProgrammaticScrollingRef.current = false;
@@ -758,6 +762,21 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 			window.removeEventListener("mousedown", onUserInteraction, true);
 		};
 	}, [editLyric.length]);
+
+	// Real-time ResizeObserver: adapts the scroll position instantaneously whenever the editor
+	// container resizes (such as dragging the spectrogram resize handle, expanding/collapsing the spectrogram, or window resize)
+	useEffect(() => {
+		const el = viewElRef.current;
+		if (!el) return;
+
+		const resizeObserver = new ResizeObserver(() => {
+			if (lastActiveLineIndexRef.current === -1) return;
+			scrollToLineSmooth(lastActiveLineIndexRef.current);
+		});
+
+		resizeObserver.observe(el);
+		return () => resizeObserver.disconnect();
+	}, [scrollToLineSmooth]);
 
 	useEffect(() => {
 		const shouldFollow = autoScrollEnabled || previewFollowsPlayback;

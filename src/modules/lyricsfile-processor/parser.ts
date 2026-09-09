@@ -4,6 +4,7 @@ import type {
 	LyricLine,
 	LyricSection,
 	LyricWord,
+	LyricWordBase,
 	TTMLLyric,
 	TTMLMetadata,
 } from "../../types/ttml.ts";
@@ -73,7 +74,7 @@ function parseSegment(raw: unknown): LyricWordBase | null {
 }
 
 function parseWord(raw: LyricsfileWord): LyricWord {
-	const rawRec = raw as Record<string, unknown>;
+	const rawRec = raw as unknown as Record<string, unknown>;
 	const trailingSepRaw = rawRec.trailing_separator;
 	const trailingSep =
 		typeof trailingSepRaw === "string" ? trailingSepRaw : undefined;

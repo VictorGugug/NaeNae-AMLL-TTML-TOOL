@@ -4,7 +4,6 @@ import SuspensePlaceHolder from "$/components/SuspensePlaceHolder";
 import {
 	PreviewModeType,
 	previewModeTypeAtom,
-	useOriginalPreviewStyleAtom,
 } from "$/modules/settings/states/preview";
 import { lazy } from "$/utils/lazy.ts";
 
@@ -15,19 +14,15 @@ const SpicyLyrics = lazy(() => import("$/components/SpicyLyrics"));
 
 export const PreviewModeSwitcher = () => {
 	const previewModeType = useAtomValue(previewModeTypeAtom);
-	const useOriginalPreviewStyle = useAtomValue(useOriginalPreviewStyleAtom);
-
-	const shouldUseOriginal =
-		useOriginalPreviewStyle || previewModeType === PreviewModeType.AMLL;
 
 	return (
 		<Suspense fallback={<SuspensePlaceHolder />}>
 			{previewModeType === PreviewModeType.Standard && (
-				shouldUseOriginal ? <AMLL /> : <AMLLWrapper variant="standard" />
+				<AMLLWrapper variant="standard" />
 			)}
 			{previewModeType === PreviewModeType.AMLL && <AMLL />}
 			{previewModeType === PreviewModeType.Toxi && (
-				shouldUseOriginal ? <AMLL /> : <AMLLWrapper variant="toxi" />
+				<AMLLWrapper variant="toxi" />
 			)}
 			{previewModeType === PreviewModeType.Spicy && <SpicyLyrics />}
 			{previewModeType === PreviewModeType.Timing && <TimingOverview />}

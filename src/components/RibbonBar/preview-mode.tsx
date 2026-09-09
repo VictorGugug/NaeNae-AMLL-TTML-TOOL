@@ -33,10 +33,6 @@ import {
 	spicyBackgroundModeAtom,
 	spicyForceLineSyncedAtom,
 	spicySimpleLyricsModeAtom,
-	syllableSmoothingEnabledAtom,
-	syllableSmoothingFactorAtom,
-	timeStretchAlgorithmAtom,
-	translationTypeAtom,
 	useOriginalPreviewStyleAtom,
 	vsyncAtom,
 } from "$/modules/settings/states/preview";
@@ -71,18 +67,6 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 	const [spicyBackgroundMode, setSpicyBackgroundMode] = useAtom(
 		spicyBackgroundModeAtom,
 	);
-	const [syllableSmoothingEnabled, setSyllableSmoothingEnabled] = useAtom(
-		syllableSmoothingEnabledAtom,
-	);
-	const [syllableSmoothingFactor, setSyllableSmoothingFactor] = useAtom(
-		syllableSmoothingFactorAtom,
-	);
-	const [timeStretchAlgorithm, setTimeStretchAlgorithm] = useAtom(
-		timeStretchAlgorithmAtom,
-	);
-	const [translationType, setTranslationType] = useAtom(
-		translationTypeAtom,
-	);
 	const { t } = useTranslation();
 	const [showAdvanced, setShowAdvanced] = useAtom(advancedRibbonControlsAtom);
 
@@ -106,8 +90,8 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 									"AMLL 模式已弃用，请使用标准模式",
 								),
 							);
-							setUseOriginalPreviewStyle(true);
 							setPreviewModeType(PreviewModeType.Standard);
+							setUseOriginalPreviewStyle(true);
 							return;
 						}
 						setPreviewModeType(v as PreviewModeType);

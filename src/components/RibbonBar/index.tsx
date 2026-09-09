@@ -44,7 +44,7 @@ export const RibbonBar = memo(
 						"var(--ribbon-bg, var(--titlebar-bg, var(--color-panel-translucent)))",
 					backdropFilter: "blur(var(--custom-backdrop-blur, 16px)) saturate(160%)",
 					zIndex: 10,
-				}}
+				} as React.CSSProperties}
 				ref={ref}
 			>
 				<Inset>

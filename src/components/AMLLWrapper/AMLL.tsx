@@ -108,10 +108,13 @@ export const AMLL = memo(() => {
                         enableScale={true}
                         playing={isPlaying}
                         onLyricLineClick={(clicked) => {
-                            const line = clicked?.line || clicked;
+                            const raw = (clicked && typeof clicked === "object" && "line" in clicked ? (clicked as { line?: unknown }).line : clicked);
+                            const line = raw as { startTime?: number; id?: string } | null;
                             if (line && typeof line.startTime === "number") {
                                 setCurrentTimeAtom(line.startTime);
-                                setSelectedLines(new Set([line.id]));
+                                if (line.id) {
+                                    setSelectedLines(new Set([line.id]));
+                                }
                                 audioEngine.seekMusic(line.startTime / 1000);
                             }
                         }}

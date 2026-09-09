@@ -480,6 +480,7 @@ export {
 	syllableSmoothingFactorAtom,
 	timeStretchAlgorithmAtom,
 	translationTypeAtom,
+	originalPreviewStyleByModeAtom,
 	useOriginalPreviewStyleAtom,
 	vsyncAtom,
 } from "./preview";

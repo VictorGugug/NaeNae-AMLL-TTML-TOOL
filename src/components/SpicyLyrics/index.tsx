@@ -191,7 +191,11 @@ export const SpicyLyrics = memo(() => {
 	}, [simple]);
 
 	useEffect(() => {
-		const onUserInteraction = () => {
+		const onUserInteraction = (e: Event) => {
+			const viewport = viewportRef.current;
+			if (e.target && viewport && !viewport.contains(e.target as Node)) {
+				return;
+			}
 			activeScrollCancelRef.current?.();
 			activeScrollCancelRef.current = null;
 			isProgrammaticScrollingRef.current = false;
@@ -224,6 +228,20 @@ export const SpicyLyrics = memo(() => {
 			window.removeEventListener("pointerdown", onUserInteraction, true);
 			window.removeEventListener("mousedown", onUserInteraction, true);
 		};
+	}, []);
+
+	// Real-time ResizeObserver: invalidates lastLine so that when the spectrogram resizes,
+	// the animation frame immediately adapts the scroll position to keep the line visible
+	useEffect(() => {
+		const viewport = viewportRef.current;
+		if (!viewport) return;
+
+		const resizeObserver = new ResizeObserver(() => {
+			lastLine.current = null;
+		});
+
+		resizeObserver.observe(viewport);
+		return () => resizeObserver.disconnect();
 	}, []);
 
 	useEffect(() => {
