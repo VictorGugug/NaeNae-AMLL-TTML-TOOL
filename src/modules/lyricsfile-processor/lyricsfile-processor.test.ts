@@ -234,6 +234,8 @@ lines:
 		expect(parsed.lyricLines[3].isDuet).toBe(true);
 		expect(parsed.lyricLines[3].isBG).toBe(true);
 
+		expect(yaml).toContain("id: v4\n      name: Both Together\n      type: group");
+		expect(yaml).toContain("id: v1\n      name: Ariana\n      type: person");
 		expect(exportLyricsfileText(parsed)).toBe(yaml);
 	});
 

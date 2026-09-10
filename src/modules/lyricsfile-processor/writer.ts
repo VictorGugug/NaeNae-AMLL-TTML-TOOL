@@ -233,7 +233,7 @@ export function exportLyricsfileText(ttmlLyric: TTMLLyric): string {
 						: undefined) ??
 					VOCALIST_DEFAULT_NAMES[id] ??
 					id,
-				type: "person" as const,
+				type: id === VOCALIST_ID_GROUP ? ("group" as const) : ("person" as const),
 			}))
 		: [];
 
