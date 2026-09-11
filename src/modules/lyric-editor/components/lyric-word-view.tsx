@@ -1021,8 +1021,13 @@ const LyricSyncWordView: FC<{
 
 	// Optimized render loop for pre-playback word ambient highlighting
 	useEffect(() => {
-		if (!enableUpcomingWordHighlight || !ambientHighlightRef.current) return;
+		if (!ambientHighlightRef.current) return;
+		if (!enableUpcomingWordHighlight) {
+			ambientHighlightRef.current.style.opacity = "0";
+			return;
+		}
 
+		const el = ambientHighlightRef.current;
 		const updateHighlight = () => {
 			if (!ambientHighlightRef.current) return;
 			const currentTime = store.get(currentTimeAtom);
@@ -1057,7 +1062,13 @@ const LyricSyncWordView: FC<{
 		// Run immediately to establish initial state without waiting for playback
 		updateHighlight();
 
-		return store.sub(currentTimeAtom, updateHighlight);
+		const unsub = store.sub(currentTimeAtom, updateHighlight);
+		return () => {
+			unsub();
+			if (el) {
+				el.style.opacity = "0";
+			}
+		};
 	}, [
 		enableUpcomingWordHighlight,
 		upcomingWordHighlightColor,
