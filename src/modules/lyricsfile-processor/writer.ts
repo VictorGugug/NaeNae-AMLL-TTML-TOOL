@@ -257,8 +257,7 @@ export function exportLyricsfileText(ttmlLyric: TTMLLyric): string {
 	}
 
 	const doc: LyricsfileDocument = {
-		lyricsfile: "1.1",
-		version: "1.1",
+		version: "1.0",
 		metadata: metadataDoc,
 	};
 
@@ -318,9 +317,9 @@ export function exportLyricsfileText(ttmlLyric: TTMLLyric): string {
 	}
 
 	if (instrumentalFlag === true) {
-		doc.lines = [];
-		if (typeof ttmlLyric.plain === "string") doc.plain = ttmlLyric.plain;
-		else doc.plain = "";
+		if (typeof ttmlLyric.plain === "string" && ttmlLyric.plain.trim().length > 0) {
+			doc.plain = ttmlLyric.plain;
+		}
 	} else if (lyricLines.length > 0) {
 		doc.lines = lyricLines.map((line) => buildLine(line, hasVocalists));
 		if (typeof ttmlLyric.plain === "string") doc.plain = ttmlLyric.plain;
@@ -339,6 +338,47 @@ export function exportLyricsfileText(ttmlLyric: TTMLLyric): string {
 		if (typeof ttmlLyric.plainTranslation === "string" && ttmlLyric.plainTranslation.length > 0) {
 			doc.plain_translation = ttmlLyric.plainTranslation;
 		}
+	}
+
+	const hasWord11 =
+		doc.lines?.some((l) =>
+			l.words?.some(
+				(w) =>
+					w.trailing_separator !== undefined ||
+					(w.segments && w.segments.length > 0) ||
+					(w.syllables && w.syllables.length > 0) ||
+					w.transliteration !== undefined ||
+					w.translation !== undefined,
+			),
+		) ?? false;
+	const hasLine11 =
+		doc.lines?.some(
+			(l) =>
+				l.translation !== undefined ||
+				l.transliteration !== undefined ||
+				l.role !== undefined ||
+				l.vocalist !== undefined,
+		) ?? false;
+	const hasSections = (doc.sections?.length ?? 0) > 0;
+	const hasVocalistsMeta = (metadataDoc.vocalists?.length ?? 0) > 0;
+	const hasToolBlock =
+		doc.x_amll_tool !== undefined && Object.keys(doc.x_amll_tool).length > 0;
+	const hasPlainExtras =
+		doc.plain_transliteration !== undefined || doc.plain_translation !== undefined;
+
+	const is11 =
+		hasWord11 ||
+		hasLine11 ||
+		hasSections ||
+		hasVocalistsMeta ||
+		hasToolBlock ||
+		hasPlainExtras;
+
+	if (is11) {
+		doc.lyricsfile = "1.1";
+		doc.version = "1.1";
+	} else {
+		doc.version = "1.0";
 	}
 
 	return stringify(doc, {

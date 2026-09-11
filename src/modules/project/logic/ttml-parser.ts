@@ -688,12 +688,34 @@ export function parseLyric(ttmlText: string): TTMLLyric {
 		}
 	}
 
+	let durationMs: number | undefined;
+	const bodyEl = ttmlDoc.querySelector("body");
+	const durAttr = bodyEl ? getAttr(bodyEl, "dur") : null;
+	if (durAttr) {
+		const parsedMs = parseTimespan(durAttr);
+		if (parsedMs > 0) durationMs = parsedMs;
+	}
+
+	let instrumental: boolean | undefined;
+	const instMeta = metadata.find(
+		(m) => m.key === "amll:instrumental" || m.key === "instrumental",
+	);
+	if (instMeta?.value[0] === "true") {
+		instrumental = true;
+	}
+
 	return {
 		metadata: metadata.filter(
-			(m) => m.key !== "amll:marks" && m.key !== "amll:sections",
+			(m) =>
+				m.key !== "amll:marks" &&
+				m.key !== "amll:sections" &&
+				m.key !== "amll:instrumental" &&
+				m.key !== "instrumental",
 		),
 		lyricLines: lyricLines,
 		marks: marks.length > 0 ? marks : undefined,
 		sections,
+		durationMs,
+		instrumental,
 	};
 }

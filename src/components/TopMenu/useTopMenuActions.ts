@@ -200,7 +200,9 @@ export const useTopMenuActions = () => {
 					extensions: [
 						"ttml",
 						"lyricsfile.yaml",
+						"lyricsfile.yml",
 						"yaml",
+						"yml",
 						"lrc",
 						"qrc",
 						"eslrc",

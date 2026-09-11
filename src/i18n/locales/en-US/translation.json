@@ -15,6 +15,14 @@
 		"empty": {
 			"title": "No lyric lines",
 			"description": "Add new lyric lines in the top panel or open/import existing lyrics from the menu"
+		},
+		"instrumental": {
+			"badge": "Instrumental",
+			"title": "Instrumental Track",
+			"description": "This track is marked as instrumental. No lyrics are present.",
+			"duration": "Duration: {{duration}}",
+			"editMetadata": "Edit Metadata",
+			"makeVocal": "Convert to Vocal Track"
 		}
 	},
 	"importChooser": {
@@ -871,7 +879,16 @@
 			"ttmlAuthorGithub": "Lyrics Author GitHub ID",
 			"ttmlAuthorGithubInvalidMsg": "GitHub ID should be numeric",
 			"ttmlAuthorGithubLogin": "Lyrics Author GitHub Username",
-			"ttmlAuthorGithubLoginInvalidMsg": "GitHub username should be alphanumeric or hyphens, up to 39 characters"
+			"ttmlAuthorGithubLoginInvalidMsg": "GitHub username should be alphanumeric or hyphens, up to 39 characters",
+			"language": "Language (BCP-47)",
+			"lyricsfileCreatedByDiscord": "Lyricsfile Creator (Discord username)",
+			"lyricsfileCreatedByDiscordInvalidMsg": "Discord username should be lowercase, 2-32 chars (letters, digits, . or _)"
+		},
+		"track": {
+			"title": "Track Settings",
+			"instrumental": "Instrumental Track",
+			"durationMs": "Duration (ms)",
+			"offsetMs": "Offset (ms)"
 		},
 		"title": "Metadata Editor",
 		"key": "Key",

@@ -70,7 +70,7 @@ export const ImportExportLyric = () => {
 			filters: [
 				{
 					name: "Lyricsfile YAML files",
-					extensions: ["lyricsfile.yaml", "yaml"],
+					extensions: ["lyricsfile.yaml", "lyricsfile.yml", "yaml", "yml"],
 				},
 			],
 		});

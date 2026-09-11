@@ -7,6 +7,7 @@ import exportTTMLText, {
 	hasExportableLineContent,
 	shouldExportAsLineSynced,
 } from "./ttml-writer";
+import { parseLyric } from "./ttml-parser";
 
 function backgroundLine(id: string): LyricLine {
 	return { ...newLyricLine(), id, isBG: true };
@@ -188,5 +189,21 @@ describe("exportTTMLText background lines", () => {
 		expect(pElements[0].getAttribute("end")).toBe("00:43.627");
 		expect(pElements[1].getAttribute("begin")).toBe("00:50.131");
 		expect(pElements[1].getAttribute("end")).toBe("00:51.600");
+	});
+
+	it("preserves instrumental flag and duration_ms through TTML export and parse", () => {
+		const ttml = exportTTMLText({
+			metadata: [{ key: "musicName", value: ["Quiet Transit"] }],
+			lyricLines: [],
+			instrumental: true,
+			durationMs: 240000,
+		});
+
+		expect(ttml).toContain('dur="04:00.000"');
+		expect(ttml).toContain('<amll:meta key="amll:instrumental" value="true" />');
+
+		const parsed = parseLyric(ttml);
+		expect(parsed.instrumental).toBe(true);
+		expect(parsed.durationMs).toBe(240000);
 	});
 });

@@ -336,7 +336,43 @@ export function parseLyricsfile(text: string): TTMLLyric {
 		groupVocalistId,
 	};
 	const rawLines = Array.isArray(raw.lines) ? raw.lines : [];
-	const lyricLines = rawLines.map((line) => parseLine(line, vocalistSlots));
+	let lyricLines = rawLines.map((line) => parseLine(line, vocalistSlots));
+
+	if (
+		lyricLines.length === 0 &&
+		!instrumental &&
+		typeof raw.plain === "string" &&
+		raw.plain.trim().length > 0
+	) {
+		const plainLines = raw.plain
+			.split(/\r?\n/)
+			.map((l) => l.trim())
+			.filter((l) => l.length > 0);
+		lyricLines = plainLines.map((lineText) => ({
+			id: uid(),
+			words: [
+				{
+					id: uid(),
+					word: lineText,
+					startTime: 0,
+					endTime: 0,
+					obscene: false,
+					emptyBeat: 0,
+					romanWord: "",
+				},
+			],
+			translatedLyric: "",
+			romanLyric: "",
+			isBG: false,
+			isDuet: false,
+			isMiddle: false,
+			isDuetGroup: false,
+			startTime: 0,
+			endTime: 0,
+			ignoreSync: false,
+			isLineSynced: true,
+		}));
+	}
 
 	assignLineSections(lyricLines, sections, rawSections);
 

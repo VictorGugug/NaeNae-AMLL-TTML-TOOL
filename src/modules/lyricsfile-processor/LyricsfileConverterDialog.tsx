@@ -46,7 +46,12 @@ const OUTPUT_EXTENSION: Record<Direction, string> = {
 
 function detectDirection(fileName: string): Direction | null {
 	const lower = fileName.toLowerCase();
-	if (lower.endsWith(".lyricsfile.yaml") || lower.endsWith(".yaml")) {
+	if (
+		lower.endsWith(".lyricsfile.yaml") ||
+		lower.endsWith(".lyricsfile.yml") ||
+		lower.endsWith(".yaml") ||
+		lower.endsWith(".yml")
+	) {
 		return "lyricsfile-to-ttml";
 	}
 	if (lower.endsWith(".ttml")) {
@@ -137,7 +142,13 @@ export const LyricsfileConverterDialog = () => {
 			filters: [
 				{
 					name: "Lyrics files",
-					extensions: ["ttml", "yaml", "lyricsfile.yaml"],
+					extensions: [
+						"ttml",
+						"yaml",
+						"yml",
+						"lyricsfile.yaml",
+						"lyricsfile.yml",
+					],
 				},
 			],
 		});
@@ -324,7 +335,10 @@ export const LyricsfileConverterDialog = () => {
 							<Button
 								variant="soft"
 								onClick={onUseLoadedFile}
-								disabled={currentLyricLines.lyricLines.length === 0}
+								disabled={
+									currentLyricLines.lyricLines.length === 0 &&
+									!currentLyricLines.instrumental
+								}
 							>
 								<DocumentArrowUp16Regular />
 								{t(

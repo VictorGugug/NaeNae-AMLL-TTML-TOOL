@@ -17,6 +17,7 @@ import {
 	DropdownMenu,
 	Flex,
 	IconButton,
+	Switch,
 	Text,
 	TextField,
 } from "@radix-ui/themes";
@@ -395,6 +396,81 @@ const MetadataEntry = memo(
 	},
 );
 
+const TrackPropertiesEditor = () => {
+	const { t } = useTranslation();
+	const [lyricLines, setLyricLines] = useImmerAtom(lyricLinesAtom);
+
+	return (
+		<Box
+			mb="4"
+			p="3"
+			style={{
+				background: "var(--gray-a2)",
+				borderRadius: "var(--radius-3)",
+				border: "1px solid var(--gray-a4)",
+			}}
+		>
+			<Flex align="center" justify="between" mb="2">
+				<Flex align="center" gap="2">
+					<MusicNote1Regular />
+					<Text weight="bold" size="2">
+						{t("metadataDialog.track.title", "Track Settings")}
+					</Text>
+				</Flex>
+				<Flex align="center" gap="2">
+					<Text size="2" color="gray">
+						{t("metadataDialog.track.instrumental", "Instrumental Track")}
+					</Text>
+					<Switch
+						checked={!!lyricLines.instrumental}
+						onCheckedChange={(checked) => {
+							setLyricLines((prev) => {
+								prev.instrumental = checked;
+							});
+						}}
+					/>
+				</Flex>
+			</Flex>
+			<Flex gap="3" mt="2" direction={{ initial: "column", sm: "row" }}>
+				<Box style={{ flex: 1 }}>
+					<Text size="1" color="gray" as="p" mb="1">
+						{t("metadataDialog.track.durationMs", "Duration (ms)")}
+					</Text>
+					<TextField.Root
+						type="number"
+						placeholder="e.g. 214000"
+						value={lyricLines.durationMs !== undefined ? String(lyricLines.durationMs) : ""}
+						onChange={(e) => {
+							const val = e.currentTarget.value.trim();
+							const num = Number(val);
+							setLyricLines((prev) => {
+								prev.durationMs = val !== "" && !Number.isNaN(num) ? num : undefined;
+							});
+						}}
+					/>
+				</Box>
+				<Box style={{ flex: 1 }}>
+					<Text size="1" color="gray" as="p" mb="1">
+						{t("metadataDialog.track.offsetMs", "Offset (ms)")}
+					</Text>
+					<TextField.Root
+						type="number"
+						placeholder="0"
+						value={lyricLines.offsetMs !== undefined ? String(lyricLines.offsetMs) : ""}
+						onChange={(e) => {
+							const val = e.currentTarget.value.trim();
+							const num = Number(val);
+							setLyricLines((prev) => {
+								prev.offsetMs = val !== "" && !Number.isNaN(num) ? num : undefined;
+							});
+						}}
+					/>
+				</Box>
+			</Flex>
+		</Box>
+	);
+};
+
 const VOCALIST_DEFAULT_LABELS: Record<string, string> = {
 	v1: "Lead",
 	v2: "Duet",
@@ -402,8 +478,6 @@ const VOCALIST_DEFAULT_LABELS: Record<string, string> = {
 	v4: "Harmony",
 };
 
-// Real vocalist names editor. Only relevant for the lyricsfile (YAML) export —
-// TTML has no concept of named vocalists, only the generic v1/v2/v3 agent ids.
 const VocalistNamesEditor = () => {
 	const { t } = useTranslation();
 	const [lyricLines, setLyricLines] = useImmerAtom(lyricLinesAtom);
@@ -672,6 +746,14 @@ export const MetadataEditor = () => {
 			},
 			{
 				label: t(
+					"metadataDialog.builtinOptions.language",
+					"Language (BCP-47)",
+				),
+				value: "language",
+				icon: <Info16Regular />,
+			},
+			{
+				label: t(
 					"metadataDialog.builtinOptions.lyricsfileCreatedByDiscord",
 					"[BETA] Lyricsfile creator (Discord username)",
 				),
@@ -726,6 +808,7 @@ export const MetadataEditor = () => {
 				</div>
 
 				<div className={styles.dialogBody}>
+					<TrackPropertiesEditor />
 					<VocalistNamesEditor />
 					<table className={styles.metadataTable}>
 						<thead>

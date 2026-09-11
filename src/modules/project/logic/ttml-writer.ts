@@ -290,6 +290,13 @@ export default function exportTTMLText(
 		metadataEl.appendChild(metaEl);
 	}
 
+	if (ttmlLyric.instrumental === true) {
+		const metaEl = doc.createElement("amll:meta");
+		metaEl.setAttribute("key", "amll:instrumental");
+		metaEl.setAttribute("value", "true");
+		metadataEl.appendChild(metaEl);
+	}
+
 	head.appendChild(metadataEl);
 
 	let i = 0;
@@ -300,7 +307,11 @@ export default function exportTTMLText(
 	>();
 
 	const guessDuration = lyric[lyric.length - 1]?.endTime ?? 0;
-	body.setAttribute("dur", msToTimestamp(guessDuration));
+	const durationMs =
+		typeof ttmlLyric.durationMs === "number" && ttmlLyric.durationMs > 0
+			? ttmlLyric.durationMs
+			: guessDuration;
+	body.setAttribute("dur", msToTimestamp(durationMs));
 	const isDynamicLyric = lyric.some(
 		(line) => line.words.filter((v) => v.word.trim().length > 0).length > 1,
 	);

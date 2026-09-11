@@ -446,4 +446,46 @@ lines:
 		const out = exportLyricsfileText(p);
 		expect(out).toContain("translation: Hola");
 	});
+
+	it("handles instrumental.lyricsfile.yaml and exports 1.0 without lines or plain (spec §3)", () => {
+		const yaml = `version: '1.0'
+
+metadata:
+  title: 'Quiet Transit'
+  artist: 'Example Ensemble'
+  duration_ms: 240000
+  instrumental: true
+`;
+		const parsed = parseLyricsfile(yaml);
+		expect(parsed.instrumental).toBe(true);
+		expect(parsed.durationMs).toBe(240000);
+		expect(parsed.lyricLines).toHaveLength(0);
+		expect(parsed.metadata.find((m) => m.key === "musicName")?.value).toEqual(["Quiet Transit"]);
+		expect(parsed.metadata.find((m) => m.key === "artists")?.value).toEqual(["Example Ensemble"]);
+
+		const exported = exportLyricsfileText(parsed);
+		expect(exported).toMatch(/version: ['"]1\.0['"]/);
+		expect(exported).toContain("instrumental: true");
+		expect(exported).toContain("duration_ms: 240000");
+		expect(exported).not.toContain("lines:");
+		expect(exported).not.toContain("plain:");
+	});
+
+	it("parses minimal.lyricsfile.yaml plain lyrics into editable lines (spec §2)", () => {
+		const yaml = `version: '1.0'
+
+metadata:
+  title: 'Morning Light'
+  artist: 'Example Artist'
+
+plain: |
+  Morning light through the window
+  A new day begins
+`;
+		const parsed = parseLyricsfile(yaml);
+		expect(parsed.plain).toBe("Morning light through the window\nA new day begins\n");
+		expect(parsed.lyricLines).toHaveLength(2);
+		expect(parsed.lyricLines[0].words.map((w) => w.word).join("")).toBe("Morning light through the window");
+		expect(parsed.lyricLines[1].words.map((w) => w.word).join("")).toBe("A new day begins");
+	});
 });

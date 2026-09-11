@@ -10,7 +10,7 @@
  */
 
 import { MyLocation24Regular } from "@fluentui/react-icons";
-import { Box, Button, Flex, Text } from "@radix-ui/themes";
+import { Badge, Box, Button, Flex, Text } from "@radix-ui/themes";
 import { atom, useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
 import { splitAtom } from "jotai/utils";
 import { useSetImmerAtom } from "jotai-immer";
@@ -49,6 +49,7 @@ import {
 } from "$/modules/settings/states/index.ts";
 import {
 	importLyricsChooserDialogAtom,
+	metadataEditorDialogAtom,
 	projectsDialogAtom,
 } from "$/states/dialogs";
 import {
@@ -137,6 +138,7 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 	const setGuideStep = useSetAtom(guideStepAtom);
 	const setImportChooser = useSetAtom(importLyricsChooserDialogAtom);
 	const setProjectsDialog = useSetAtom(projectsDialogAtom);
+	const setMetadataEditorDialog = useSetAtom(metadataEditorDialogAtom);
 	const { openFile } = useFileOpener();
 	const openExistingTtml = useCallback(() => {
 		const input = document.createElement("input");
@@ -820,7 +822,80 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 
 	useImperativeHandle(ref, () => viewElRef.current as HTMLDivElement, []);
 
-	if (editLyric.length === 0)
+	if (editLyric.length === 0) {
+		const lyricData = store.get(lyricLinesAtom);
+		if (lyricData.instrumental) {
+			const trackTitle =
+				lyricData.metadata.find((m) => m.key === "musicName" || m.key === "title")
+					?.value[0] || "";
+			const trackArtist =
+				lyricData.metadata
+					.find((m) => m.key === "artists" || m.key === "artist")
+					?.value.filter(Boolean)
+					.join(", ") || "";
+			const formattedDuration = lyricData.durationMs
+				? `${Math.floor(lyricData.durationMs / 60000)}:${String(
+						Math.floor((lyricData.durationMs % 60000) / 1000),
+				  ).padStart(2, "0")}`
+				: "";
+
+			return (
+				<Flex
+					data-guide-target="editor"
+					flexGrow="1"
+					gap="3"
+					align="center"
+					justify="center"
+					direction="column"
+					height="100%"
+					ref={ref}
+				>
+					<Badge size="2" color="iris" variant="surface">
+						{t("app.instrumental.badge", "Instrumental")}
+					</Badge>
+					<Text size="5" weight="bold">
+						{trackTitle || t("app.instrumental.title", "Instrumental Track")}
+					</Text>
+					{trackArtist && (
+						<Text size="3" color="gray">
+							{trackArtist}
+						</Text>
+					)}
+					{formattedDuration && (
+						<Text size="2" color="gray">
+							{t("app.instrumental.duration", `Duration: ${formattedDuration}`, {
+								duration: formattedDuration,
+							})}
+						</Text>
+					)}
+					<Text color="gray" align="center" size="2">
+						{t(
+							"app.instrumental.description",
+							"This track is marked as instrumental. No lyrics are present.",
+						)}
+					</Text>
+					<Flex gap="2" wrap="wrap" justify="center" mt="2">
+						<Button variant="soft" onClick={() => setMetadataEditorDialog(true)}>
+							{t("app.instrumental.editMetadata", "Edit Metadata")}
+						</Button>
+						<Button
+							variant="outline"
+							onClick={() =>
+								editLyricLines((prev) => {
+									prev.instrumental = false;
+								})
+							}
+						>
+							{t("app.instrumental.makeVocal", "Convert to Vocal Track")}
+						</Button>
+						<Button variant="outline" onClick={() => setProjectsDialog(true)}>
+							{t("beginnerGuide.empty.projects", "Projects")}
+						</Button>
+					</Flex>
+				</Flex>
+			);
+		}
+
 		return (
 			<Flex
 				data-guide-target="editor"
@@ -861,6 +936,7 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 				</Flex>
 			</Flex>
 		);
+	}
 	return (
 		<Flex
 			data-guide-target="editor"

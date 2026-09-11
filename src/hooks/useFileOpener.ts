@@ -111,8 +111,10 @@ export const useFileOpener = () => {
 			const rawExt = file.name.split(".").pop()?.toLowerCase() || "";
 			const isLyricsfile =
 				file.name.toLowerCase().endsWith(".lyricsfile.yaml") ||
+				file.name.toLowerCase().endsWith(".lyricsfile.yml") ||
 				rawExt === "lyricsfile" ||
-				rawExt === "yaml";
+				rawExt === "yaml" ||
+				rawExt === "yml";
 			const ext = forceExt
 				? forceExt.toLowerCase()
 				: isLyricsfile

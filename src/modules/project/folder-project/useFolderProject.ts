@@ -996,7 +996,7 @@ export const useFolderProject = () => {
 		const rawAudio = store.get(loadedAudioAtom);
 		const audioFile = rawAudio instanceof File ? rawAudio : null;
 		const lyric = store.get(lyricLinesAtom);
-		const hasLyricContent = lyric.lyricLines.length > 0;
+		const hasLyricContent = lyric.lyricLines.length > 0 || lyric.instrumental === true;
 		const shouldWriteLyric = hasLyricContent;
 		const fileKind = store.get(activeFileKindAtom);
 		const isLyricsfile = fileKind === ActiveFileKind.Lyricsfile;
@@ -1140,7 +1140,7 @@ export const useFolderProject = () => {
 			if (!isTauri()) return true;
 
 			const lyric = store.get(lyricLinesAtom);
-			if (lyric.lyricLines.length === 0) {
+			if (lyric.lyricLines.length === 0 && !lyric.instrumental) {
 				if (!options?.silent) {
 					toast.info(
 						t(
