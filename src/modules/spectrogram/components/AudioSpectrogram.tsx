@@ -11,7 +11,6 @@ import {
 	IconButton,
 	Popover,
 	SegmentedControl,
-	Select,
 	Slider,
 	Text,
 	Theme,
@@ -64,7 +63,6 @@ import {
 } from "$/modules/spectrogram/states";
 import { isDraggingAtom } from "$/modules/spectrogram/states/dnd.ts";
 import {
-	timeShiftDialogAtom,
 	timeShiftPreviewActiveAtom,
 } from "$/states/dialogs.ts";
 import {
@@ -116,7 +114,6 @@ export const AudioSpectrogram: FC = memo(() => {
 		showUnselectedLinesAtom,
 	);
 	const globalEnableInsert = useAtomValue(globalEnableInsertAtom);
-	const setDialogVisible = useSetAtom(timeShiftDialogAtom);
 	const setPreviewActive = useSetAtom(timeShiftPreviewActiveAtom);
 
 	useCommand(cmdDuplicatePaste, () => {
@@ -305,12 +302,6 @@ export const AudioSpectrogram: FC = memo(() => {
 			handleSelectionMouseDown(e);
 		},
 		[handleTimelineMouseDown, handleSelectionMouseDown],
-	);
-
-	const { handleScrubStart } = useScrubbing(
-		scrollContainerRef,
-		scrollLeft,
-		zoom,
 	);
 
 	const contextValue = useMemo<ISpectrogramContext>(
