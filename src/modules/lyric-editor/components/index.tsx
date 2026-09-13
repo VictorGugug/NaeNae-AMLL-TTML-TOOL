@@ -33,6 +33,7 @@ import { audioPlayingAtom, currentTimeAtom } from "$/modules/audio/states";
 import {
 	syncAutoScrollAtom,
 	syncFocusMainLineAtom,
+	syncTabPositionAtom,
 } from "$/modules/settings/states/sync.ts";
 import { keyLocateActiveLineAtom } from "$/states/keybindings.ts";
 import { useKeyBindingAtom } from "$/utils/keybindings.ts";
@@ -44,6 +45,7 @@ import {
 import {
 	collapsedSectionIdsAtom,
 	lyricLinesAtom,
+	previousToolModeAtom,
 	selectedLinesAtom,
 	ToolMode,
 	toolModeAtom,
@@ -79,7 +81,11 @@ const lyricLinesOnlyAtom = splitAtom(
 	focusAtom(lyricLinesAtom, (o) => o.prop("lyricLines")),
 );
 
-let editorAnchorLineIndex = -1;
+const modeAnchorLines: Record<string, number> = {
+	[ToolMode.Edit]: -1,
+	[ToolMode.Sync]: -1,
+};
+let sharedAnchorLineIndex = -1;
 
 const findCurrentLineIndex = (
 	lines: LyricLine[],
@@ -115,15 +121,22 @@ const findCurrentLineIndex = (
 		if (activeBGIndex !== -1) return activeBGIndex;
 	}
 
+	let lastValidEndTime = 0;
 	let previousIndex = -1;
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
 		if (line.endTime <= line.startTime) continue;
+		lastValidEndTime = Math.max(lastValidEndTime, line.endTime);
 		if (currentTime < line.startTime) {
 			return previousIndex !== -1 ? previousIndex : i;
 		}
 		previousIndex = i;
 	}
+
+	if (currentTime > lastValidEndTime) {
+		return -1;
+	}
+
 	return previousIndex;
 };
 
@@ -521,12 +534,114 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 			lastProgrammaticScrollTimeRef.current = performance.now();
 			viewRef.current?.scrollToIndex({
 				index: visibleIndex,
-				offset: viewContainerEl.clientHeight / -2 + 50,
+				offset: viewContainerEl.clientHeight / -2,
 			});
-			if (smooth) {
+			requestAnimationFrame(() => {
+				const el = viewEl.querySelector<HTMLElement>(
+					`[data-lyric-line-index="${index}"]`,
+				);
+				if (el) {
+					const elRect = el.getBoundingClientRect();
+					const vRect = viewEl.getBoundingClientRect();
+					const targetTop = Math.max(
+						0,
+						viewEl.scrollTop +
+							(elRect.top - vRect.top) -
+							viewEl.clientHeight / 2 +
+							elRect.height / 2,
+					);
+					if (smooth) {
+						smoothScrollTo(viewEl, targetTop, 350);
+					} else {
+						cancelScrollAnimation();
+						lastProgrammaticScrollTimeRef.current = performance.now();
+						viewEl.scrollTop = targetTop;
+					}
+				}
+			});
+		},
+		[visibleItems, smoothScrollTo, cancelScrollAnimation],
+	);
+
+	const syncTabPosition = useAtomValue(syncTabPositionAtom);
+	const syncFocusMainLine = useAtomValue(syncFocusMainLineAtom);
+
+	const restoreEditorAnchorOnListReady = useCallback(
+		(instance: ViewportListRef | null) => {
+			viewRef.current = instance;
+			if (!instance) return;
+
+			if (!syncTabPosition) {
+				const ownAnchor = modeAnchorLines[toolMode];
+				if (ownAnchor === -1) return;
+				const visibleIndex = visibleItems.findIndex(
+					(item) => item.sourceIndex === ownAnchor,
+				);
+				if (visibleIndex === -1) return;
+				requestAnimationFrame(() => {
+					const viewEl = viewElRef.current;
+					if (!viewEl?.parentElement) return;
+					const offset = viewEl.parentElement.clientHeight / -2 + 50;
+					instance.scrollToIndex({ index: visibleIndex, offset });
+				});
+				return;
+			}
+
+			let targetLineIndex = -1;
+			const selected = store.get(selectedLinesAtom);
+			const currentTime = store.get(currentTimeAtom);
+			const lines = store.get(lyricLinesAtom).lyricLines;
+			const previousMode = store.get(previousToolModeAtom);
+
+			if (previousMode === ToolMode.Preview && currentTime > 0) {
+				targetLineIndex = findCurrentLineIndex(
+					lines,
+					currentTime,
+					syncFocusMainLine,
+				);
+				if (targetLineIndex === -1) {
+					const upcoming = lines.findIndex((l) => l.startTime >= currentTime);
+					if (upcoming !== -1) {
+						targetLineIndex = upcoming;
+					}
+				}
+			} else {
+				if (selected.size > 0) {
+					targetLineIndex = lines.findIndex((l) => selected.has(l.id));
+				}
+				if (targetLineIndex === -1 && currentTime > 0) {
+					targetLineIndex = findCurrentLineIndex(
+						lines,
+						currentTime,
+						syncFocusMainLine,
+					);
+					if (targetLineIndex === -1) {
+						const upcoming = lines.findIndex((l) => l.startTime >= currentTime);
+						if (upcoming !== -1) {
+							targetLineIndex = upcoming;
+						}
+					}
+				}
+			}
+
+			if (targetLineIndex === -1) {
+				targetLineIndex = sharedAnchorLineIndex;
+			}
+			if (targetLineIndex === -1) return;
+
+			const visibleIndex = visibleItems.findIndex(
+				(item) => item.sourceIndex === targetLineIndex,
+			);
+			if (visibleIndex === -1) return;
+
+			requestAnimationFrame(() => {
+				const viewEl = viewElRef.current;
+				if (!viewEl?.parentElement) return;
+				const offset = viewEl.parentElement.clientHeight / -2;
+				instance.scrollToIndex({ index: visibleIndex, offset });
 				requestAnimationFrame(() => {
 					const el = viewEl.querySelector<HTMLElement>(
-						`[data-lyric-line-index="${index}"]`,
+						`[data-lyric-line-index="${targetLineIndex}"]`,
 					);
 					if (el) {
 						const elRect = el.getBoundingClientRect();
@@ -538,33 +653,15 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 								viewEl.clientHeight / 2 +
 								elRect.height / 2,
 						);
-						smoothScrollTo(viewEl, targetTop, 350);
+						viewEl.scrollTop = targetTop;
 					}
 				});
-			}
-		},
-		[visibleItems, smoothScrollTo, cancelScrollAnimation],
-	);
-	const restoreEditorAnchorOnListReady = useCallback(
-		(instance: ViewportListRef | null) => {
-			viewRef.current = instance;
-			if (!instance || editorAnchorLineIndex === -1) return;
-			const anchorIndex = editorAnchorLineIndex;
-			const visibleIndex = visibleItems.findIndex(
-				(item) => item.sourceIndex === anchorIndex,
-			);
-			if (visibleIndex === -1) return;
-			requestAnimationFrame(() => {
-				const viewEl = viewElRef.current;
-				if (!viewEl?.parentElement) return;
-				const offset = viewEl.parentElement.clientHeight / -2 + 50;
-				instance.scrollToIndex({ index: visibleIndex, offset });
-				if (editorAnchorLineIndex === anchorIndex) {
-					editorAnchorLineIndex = -1;
+				if (sharedAnchorLineIndex === targetLineIndex) {
+					sharedAnchorLineIndex = -1;
 				}
 			});
 		},
-		[visibleItems],
+		[visibleItems, syncTabPosition, store, syncFocusMainLine, toolMode],
 	);
 
 	const geniusCategorizationEnabled = useAtomValue(
@@ -593,7 +690,6 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 	]);
 
 	const syncAutoScroll = useAtomValue(syncAutoScrollAtom);
-	const syncFocusMainLine = useAtomValue(syncFocusMainLineAtom);
 	const userScrolledAtRef = useRef<number>(0);
 	const lastKnownTimeRef = useRef(0);
 	const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -668,11 +764,15 @@ export const LyricLinesView: FC = forwardRef<HTMLDivElement>((_props, ref) => {
 			const rect = element.getBoundingClientRect();
 			return [{ index, top: rect.top, height: rect.height }];
 		});
-		editorAnchorLineIndex = findClosestLineToViewportCenter(
+		const closest = findClosestLineToViewportCenter(
 			viewRect.top + viewRect.height / 2,
 			positions,
 		);
-	}, []);
+		if (closest !== -1) {
+			modeAnchorLines[toolMode] = closest;
+			sharedAnchorLineIndex = closest;
+		}
+	}, [toolMode]);
 
 	const handleScroll = useCallback(() => {
 		updateEditorAnchor();
