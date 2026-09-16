@@ -644,6 +644,19 @@
 	background-color: var(--accent-a4);
 }
 
+	.lyricLine.selected.activePlayback:not(.error) {
+	border-color: var(--editor-selected-line-border);
+	box-shadow: var(--editor-selected-line-shadow);
+}
+
+:global(
+		.radix-themes:is(.dark, .dark-theme):not([data-legacy-dark-theme="true"])
+	)
+	.lyricLine.selected.activePlayback:not(.error)::before {
+	opacity: 1;
+}
+
+
 .lyricWord.error,
 .lyricLine.error {
 	box-shadow: 0 0 0 2px var(--red-a10);

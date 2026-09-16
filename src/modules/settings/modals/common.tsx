@@ -2,6 +2,7 @@ import resources from "virtual:i18next-loader";
 import {
 	ArrowSortDownLines24Regular,
 	ContentView24Regular,
+	Highlight24Regular,
 	History24Regular,
 	Keyboard12324Regular,
 	LocalLanguage24Regular,
@@ -53,6 +54,7 @@ import {
 } from "$/modules/settings/states";
 import { editorAutoScrollEnabledAtom } from "$/modules/settings/states/preview";
 import {
+	editActiveLineHighlightAtom,
 	enableUpcomingWordHighlightAtom,
 	highlightActiveWordInEditAtom,
 	reversePlaybackEnabledAtom,
@@ -127,6 +129,9 @@ export const SettingsCommonTab = ({
 	);
 	const [editorAutoScroll, setEditorAutoScroll] = useAtom(editorAutoScrollEnabledAtom);
 	const [editActiveHighlight, setEditActiveHighlight] = useAtom(editActiveLineHighlightAtom);
+	const [editActiveLineHighlight, setEditActiveLineHighlight] = useAtom(
+		editActiveLineHighlightAtom,
+	);
 
 	const { t, i18n } = useTranslation();
 	const currentLanguage = i18n.resolvedLanguage || i18n.language;
@@ -873,6 +878,36 @@ export const SettingsCommonTab = ({
 
 			{section === "editor" && (
 				<Flex direction="column" gap="3">
+				<Card>
+					<Text as="label">
+						<Flex gap="3" align="center">
+							<Highlight24Regular />
+							<Box flexGrow="1">
+								<Flex gap="2" align="center" justify="between">
+									<Flex direction="column" gap="1">
+										<Text>
+											{t(
+												"settings.common.highlightActiveLine",
+												"Highlight Active Line During Playback",
+											)}
+										</Text>
+										<Text size="1" color="gray">
+											{t(
+												"settings.common.highlightActiveLineDesc",
+												"Visually highlights the lyric line currently being played in both Edit and Time modes.",
+											)}
+										</Text>
+									</Flex>
+									<Switch
+										checked={editActiveLineHighlight}
+										onCheckedChange={setEditActiveLineHighlight}
+									/>
+								</Flex>
+							</Box>
+						</Flex>
+					</Text>
+				</Card>
+
 					<Heading size="4">
 						{t("settings.group.timingHighlight", "Visual Timing Cue (Sync)")}
 					</Heading>

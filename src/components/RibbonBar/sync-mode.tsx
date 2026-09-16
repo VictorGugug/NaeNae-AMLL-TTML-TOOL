@@ -37,9 +37,13 @@ import {
 	currentEmptyBeatAtom,
 	enableTimeModeDoubleClickEditAtom,
 	showTouchSyncPanelAtom,
+	editActiveLineHighlightAtom,
+	spectrogramHoverSyncEnabledAtom,
+	syncAutoScrollAtom,
+	syncCommitOffsetAtom,
 	syncLevelModeAtom,
 	syncTimeOffsetAtom,
-	syncCommitOffsetAtom,
+	syncWordWrapAtom,
 	visualizeTimestampUpdateAtom,
 	type SyncLevelMode,
 } from "$/modules/settings/states/sync.ts";
@@ -123,8 +127,15 @@ export const SyncModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<HTMLDiv
 		);
 		const [syncTimeOffset, setSyncTimeOffset] = useAtom(syncTimeOffsetAtom);
 		const [syncCommitOffset, setSyncCommitOffset] = useAtom(syncCommitOffsetAtom);
+		const [syncWordWrap, setSyncWordWrap] = useAtom(syncWordWrapAtom);
+		const [spectrogramHoverSyncEnabled, setSpectrogramHoverSyncEnabled] =
+			useAtom(spectrogramHoverSyncEnabledAtom);
 		const [syncLevelMode, setSyncLevelMode] = useAtom(syncLevelModeAtom);
 		const [instantFade, setInstantFade] = useAtom(instantHighlightFadeAtom);
+		const [syncAutoScroll, setSyncAutoScroll] = useAtom(syncAutoScrollAtom);
+		const [syncActiveLineHighlight, setSyncActiveLineHighlight] = useAtom(
+			editActiveLineHighlightAtom,
+		);
 		const { t } = useTranslation();
 		const [showAdvanced, setShowAdvanced] = useAtom(advancedRibbonControlsAtom);
 
@@ -228,6 +239,41 @@ export const SyncModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<HTMLDiv
 							</SegmentedControl.Root>
 						</Flex>
 					</RibbonSection>
+					<RibbonSection
+						isSidebar={isSidebar}
+						label={t("ribbonBar.syncMode.playbackTracking", "Tracking")}
+					>
+						<Grid
+							columns="max-content auto"
+							gap="2"
+							gapY="1"
+							flexGrow="1"
+							align="center"
+						>
+							<Text
+								wrap="nowrap"
+								size="1"
+								style={{ color: "var(--ribbon-label-color)" }}
+							>
+								{t("ribbonBar.syncMode.autoScroll", "Auto-Scroll")}
+							</Text>
+							<Checkbox
+								checked={syncAutoScroll}
+								onCheckedChange={(v) => setSyncAutoScroll(Boolean(v))}
+							/>
+							<Text
+								wrap="nowrap"
+								size="1"
+								style={{ color: "var(--ribbon-label-color)" }}
+							>
+								{t("ribbonBar.syncMode.highlightActiveLine", "Highlight Line")}
+							</Text>
+							<Checkbox
+								checked={syncActiveLineHighlight}
+								onCheckedChange={(v) => setSyncActiveLineHighlight(Boolean(v))}
+							/>
+						</Grid>
+					</RibbonSection>
 					{showAdvanced && <RibbonSection
 						isSidebar={isSidebar}
 						label={t("ribbonBar.syncMode.assistSettings", "辅助设置")}
@@ -308,6 +354,20 @@ export const SyncModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<HTMLDiv
 								checked={enableTimeModeDoubleClickEdit}
 								onCheckedChange={(v) => setEnableTimeModeDoubleClickEdit(!!v)}
 							/>
+							<Text
+								wrap="nowrap"
+								size="1"
+								style={{ color: "var(--ribbon-label-color)" }}
+							>
+								{t(
+									"ribbonBar.syncMode.spectrogramHoverSync",
+									"Sync to Spectrogram Cursor",
+								)}
+							</Text>
+							<Checkbox
+								checked={spectrogramHoverSyncEnabled}
+								onCheckedChange={(v) => setSpectrogramHoverSyncEnabled(!!v)}
+							/>
 						</Grid>
 					</RibbonSection>}
 					{showAdvanced && <RibbonSection
@@ -321,6 +381,17 @@ export const SyncModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<HTMLDiv
 							flexGrow="1"
 							align="center"
 						>
+							<Text
+								wrap="nowrap"
+								size="1"
+								style={{ color: "var(--ribbon-label-color)" }}
+							>
+								{t("ribbonBar.syncMode.wrapWords", "Wrap Words")}
+							</Text>
+							<Checkbox
+								checked={syncWordWrap}
+								onCheckedChange={(v) => setSyncWordWrap(!!v)}
+							/>
 							<Text
 								wrap="nowrap"
 								size="1"

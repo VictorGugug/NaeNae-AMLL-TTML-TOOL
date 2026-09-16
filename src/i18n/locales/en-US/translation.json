@@ -184,7 +184,10 @@
 			"layoutMode": "Layout",
 			"auxiliaryLineDisplay": "Auxiliary Line Display",
 			"tools": "Check",
-			"previewPanel": "Preview Panel"
+			"previewPanel": "Preview Panel",
+			"playbackTracking": "Tracking",
+			"autoScroll": "Auto-Scroll",
+			"highlightActiveLine": "Highlight Line"
 		},
 		"previewMode": {
 			"mode": "Mode",
@@ -240,7 +243,12 @@
 				"title": "Manage Quick Fix Exclusions",
 				"description": "Add words to ignore in quick fixes.",
 				"placeholder": "Enter word to ignore"
-			}
+			},
+			"playbackTracking": "Tracking",
+			"autoScroll": "Auto-Scroll",
+			"highlightActiveLine": "Highlight Line",
+			"spectrogramHoverSync": "Sync to Spectrogram Cursor",
+			"wrapWords": "Wrap Words"
 		},
 		"experimentalFeatures": "Experimental Features",
 		"loading": "Loading panel..."
@@ -281,6 +289,14 @@
 			"syncTimeOffsetDesc": "Adjust all sync timestamps by this amount to compensate for audio latency.",
 			"syncCommitOffset": "Commit Input Offset (ms)",
 			"syncCommitOffsetDesc": "Specific offset for the 'Commit' action to fix delayed audio issues.",
+			"syncWordWrap": "Wrap Words in Time Mode",
+			"syncWordWrapDesc": "Wraps word cards to the next line instead of showing a horizontal scrollbar in Time / Sync tab.",
+			"syncAutoScroll": "Auto-Scroll to Active Line During Playback",
+			"syncAutoScrollDesc": "Automatically scrolls the editor view to follow the currently active lyric line during playback.",
+			"syncFocusMainLine": "Focus Main Line During Playback",
+			"syncFocusMainLineDesc": "When playing back, focuses on active main lines and ignores background lines unless no main line is active.",
+			"highlightActiveLine": "Highlight Active Line During Playback",
+			"highlightActiveLineDesc": "Visually highlights the lyric line currently being played in both Edit and Time modes.",
 			"smartFirstWord": "Smart First Word",
 			"smartFirstWordDesc": "When syncing the first word of a line, the first key press sets its start time only, without immediately setting its end time.",
 			"smartLastWord": "Smart Last Word",
