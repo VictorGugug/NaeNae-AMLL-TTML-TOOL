@@ -7,6 +7,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Per-Surface Auto-Scroll Options & Tab Position Sync** : Independent Tracking, Auto-Scroll, Highlight Line, Wrap Words, and Sync Tab toggles in the Edit, Sync, and Preview RibbonBars with matching Settings cards, keeping song position when switching between Edit, Time, and Preview tabs.
 - **Folder Projects & Workspace System** : Open, create, and save lyrics as project folders with `project.json` manifest, workspace scanning, and persistent project history.
 - **Dual Format Support (TTML + Lyricsfile YAML)** : Companion `.ttml` and `.lyricsfile.yaml` side-by-side files, format switching directly from the File menu with dirty-state protection and "Save & Switch", plus dual format badges.
 - **Lyricsfile 1.1 Engine & Community Alignment** : Bidirectional YAML 1.1 parser and writer aligned with upstream proposals (#1 to #9 in `tranxuanthang/lyricsfile`):
@@ -40,6 +41,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **TimingOverview Word Group Activation** : Clicking a word pill or group seeks playback to the word, selects its line, and resets the auto-scroll pause state.
+- **TimingOverview Auto-Scroll While Paused** : Follows the active or upcoming line after seeks while paused, with pointer-aware pausing, smooth centered scrolling.
 - **LRCLIB Import Search Diagnostics** : Identify requests with a `Lrclib-Client` header derived from the package metadata, report HTTP status codes on search and detail failures, surface the `Retry-After` delay when rate limited, fall back to `trackName` for result titles, and label instrumental tracks.
 - **Spectrogram Boundary Clamping** : Dynamically clamped spectrogram maximum height (`getAvailableSpectrogramMaxHeight`) to prevent the panel from obscuring the top RibbonBar or pushing the audio playback controls off-screen.
 - **Real-Time Viewport Scroll Adaptation** : Added `ResizeObserver` bindings across `LyricLinesView`, `AMLLWrapper`, and `SpicyLyrics` to instantaneously maintain centering on the active line when resizing panels or the window.
