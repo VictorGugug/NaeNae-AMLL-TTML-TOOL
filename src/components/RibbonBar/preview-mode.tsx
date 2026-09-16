@@ -37,6 +37,7 @@ import {
 	vsyncAtom,
 } from "$/modules/settings/states/preview";
 import { RibbonFrame, RibbonSection } from "./common";
+import { timingOverviewAutoScrollAtom } from "$/modules/settings/states/sync.ts";
 import { advancedRibbonControlsAtom } from "$/modules/onboarding/states";
 
 export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
@@ -46,6 +47,8 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 	const [previewModeType, setPreviewModeType] = useAtom(previewModeTypeAtom);
 	const [useOriginalPreviewStyle, setUseOriginalPreviewStyle] = useAtom(
 		useOriginalPreviewStyleAtom,
+	const [timingOverviewAutoScroll, setTimingOverviewAutoScroll] = useAtom(
+		timingOverviewAutoScrollAtom,
 	);
 	const [showTranslationLine, setShowTranslationLine] = useAtom(
 		showTranslationLinesAtom,
@@ -158,6 +161,32 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 								{t("ribbonBar.previewMode.backgroundStatic", "Static")}
 							</SegmentedControl.Item>
 						</SegmentedControl.Root>
+					</Grid>
+				</RibbonSection>
+			)}
+			{previewModeType === PreviewModeType.Timing && (
+				<RibbonSection
+					isSidebar={isSidebar}
+					label={t("ribbonBar.previewMode.timing", "时轴")}
+				>
+					<Grid
+						columns="max-content auto"
+						gap="2"
+						gapY="1"
+						flexGrow="1"
+						align="center"
+					>
+						<Text
+							wrap="nowrap"
+							size="1"
+							style={{ color: "var(--ribbon-label-color)" }}
+						>
+							{t("ribbonBar.previewMode.autoScroll", "Auto-Scroll")}
+						</Text>
+						<Checkbox
+							checked={timingOverviewAutoScroll}
+							onCheckedChange={(v) => setTimingOverviewAutoScroll(Boolean(v))}
+						/>
 					</Grid>
 				</RibbonSection>
 			)}

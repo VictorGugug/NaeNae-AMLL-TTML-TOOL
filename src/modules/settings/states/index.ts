@@ -456,11 +456,6 @@ export const geniusHeaderDetectionDialogOpenAtom = atom(false);
 
 export const geniusHeaderRestorationTextAtom = atom<string | null>(null);
 
-export const editActiveLineHighlightAtom = atomWithStorage<boolean>(
-	"editActiveLineHighlight",
-	false,
-);
-
 export {
 	FORK_FEATURE_FLAG_DEFAULTS,
 	type ForkFeatureFlags,

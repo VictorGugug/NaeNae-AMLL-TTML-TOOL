@@ -22,6 +22,22 @@ export const enableTimeModeDoubleClickEditAtom = atomWithStorage(
 export const syncTimeOffsetAtom = atomWithStorage("syncTimeOffset", 0);
 export const syncFghToHoverAtom = atomWithStorage("syncFghToHover", true);
 export const syncCommitOffsetAtom = atomWithStorage("syncCommitOffset", 0);
+export const syncWordWrapAtom = atomWithStorage("syncWordWrap", true);
+export const syncFocusMainLineAtom = atomWithStorage("syncFocusMainLine", true);
+export const syncAutoScrollAtom = atomWithStorage("syncAutoScroll", true);
+export const editAutoScrollAtom = syncAutoScrollAtom;
+export const editActiveLineHighlightAtom = atomWithStorage(
+	"editActiveLineHighlight",
+	false,
+);
+export const timingOverviewAutoScrollAtom = atomWithStorage(
+	"timingOverviewAutoScroll",
+	false,
+);
+export const spectrogramHoverSyncEnabledAtom = atomWithStorage(
+	"spectrogramHoverSyncEnabled",
+	false,
+);
 
 export type SyncLevelMode = "word" | "line";
 export const syncLevelModeAtom = atomWithStorage<SyncLevelMode>(

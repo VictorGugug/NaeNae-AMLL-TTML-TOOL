@@ -197,6 +197,7 @@ const LineRow = memo(
 		return (
 			<div
 				data-line-id={line.id}
+				data-line-index={index}
 				data-timing-line-index={index}
 				className={classNames(styles.row, isActive && styles.activeRow)}
 				onClick={() => onRowClick(line)}

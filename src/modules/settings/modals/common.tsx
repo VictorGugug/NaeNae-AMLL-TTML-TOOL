@@ -1,14 +1,19 @@
 import resources from "virtual:i18next-loader";
 import {
+	ArrowSortDownLines24Regular,
 	ContentView24Regular,
 	History24Regular,
 	Keyboard12324Regular,
 	LocalLanguage24Regular,
 	PaddingLeft24Regular,
 	PaddingRight24Regular,
+	PaintBrush24Regular,
 	Save24Regular,
 	Speaker224Regular,
+	Sparkle24Regular,
 	Stack24Regular,
+	Target24Regular,
+	TextWrap24Regular,
 	Timer24Regular,
 	TopSpeed24Regular,
 	VideoBackgroundEffect24Regular,
@@ -36,7 +41,6 @@ import {
 	autosaveIntervalAtom,
 	autosaveLimitAtom,
 	compactBGInSyncAtom,
-	editActiveLineHighlightAtom,
 	LayoutMode,
 	layoutModeAtom,
 	normalizeApostrophesOnImportAtom,
@@ -54,6 +58,10 @@ import {
 	reversePlaybackEnabledAtom,
 	syncCommitOffsetAtom,
 	syncFghToHoverAtom,
+	editActiveLineHighlightAtom,
+	syncAutoScrollAtom,
+	syncFocusMainLineAtom,
+	syncWordWrapAtom,
 	syncTimeOffsetAtom,
 	upcomingWordHighlightColorAtom,
 	upcomingWordHighlightThresholdAtom,
@@ -93,6 +101,11 @@ export const SettingsCommonTab = ({
 	);
 	const [syncTimeOffset, setSyncTimeOffset] = useAtom(syncTimeOffsetAtom);
 	const [syncCommitOffset, setSyncCommitOffset] = useAtom(syncCommitOffsetAtom);
+	const [syncWordWrap, setSyncWordWrap] = useAtom(syncWordWrapAtom);
+	const [syncFocusMainLine, setSyncFocusMainLine] = useAtom(
+		syncFocusMainLineAtom,
+	);
+	const [syncAutoScroll, setSyncAutoScroll] = useAtom(syncAutoScrollAtom);
 	const [syncFghToHover, setSyncFghToHover] = useAtom(syncFghToHoverAtom);
 	const [reversePlaybackEnabled, setReversePlaybackEnabled] = useAtom(
 		reversePlaybackEnabledAtom,
@@ -465,6 +478,98 @@ export const SettingsCommonTab = ({
 									<Switch
 										checked={editActiveHighlight}
 										onCheckedChange={setEditActiveHighlight}
+									/>
+								</Flex>
+							</Box>
+						</Flex>
+					</Text>
+				</Card>
+
+				<Heading size="4">
+					{t("settings.group.syncWordWrap", "Time Mode / Sync Tab")}
+				</Heading>
+				<Card>
+					<Text as="label">
+						<Flex gap="3" align="center">
+							<TextWrap24Regular />
+							<Box flexGrow="1">
+								<Flex gap="2" align="center" justify="between">
+									<Flex direction="column" gap="1">
+										<Text>
+											{t(
+												"settings.common.syncWordWrap",
+												"Wrap Words in Time Mode",
+											)}
+										</Text>
+										<Text size="1" color="gray">
+											{t(
+												"settings.common.syncWordWrapDesc",
+												"Wraps word cards to the next line instead of showing a horizontal scrollbar in Time / Sync tab.",
+											)}
+										</Text>
+									</Flex>
+									<Switch
+										checked={syncWordWrap}
+										onCheckedChange={setSyncWordWrap}
+									/>
+								</Flex>
+							</Box>
+						</Flex>
+					</Text>
+				</Card>
+				<Card>
+					<Text as="label">
+						<Flex gap="3" align="center">
+							<ArrowSortDownLines24Regular />
+							<Box flexGrow="1">
+								<Flex gap="2" align="center" justify="between">
+									<Flex direction="column" gap="1">
+										<Text>
+											{t(
+												"settings.common.syncAutoScroll",
+												"Auto-Scroll to Active Line During Playback",
+											)}
+										</Text>
+										<Text size="1" color="gray">
+											{t(
+												"settings.common.syncAutoScrollDesc",
+												"Automatically scrolls the editor view to follow the currently active lyric line during playback.",
+											)}
+										</Text>
+									</Flex>
+									<Switch
+										checked={syncAutoScroll}
+										onCheckedChange={setSyncAutoScroll}
+									/>
+								</Flex>
+							</Box>
+						</Flex>
+					</Text>
+				</Card>
+				<Card style={{ opacity: syncAutoScroll ? 1 : 0.4, transition: "opacity 0.2s ease", pointerEvents: syncAutoScroll ? "auto" : "none" }}>
+					<Text as="label">
+						<Flex gap="3" align="center">
+							<Target24Regular style={{ opacity: syncAutoScroll ? 1 : 0.5 }} />
+							<Box flexGrow="1">
+								<Flex gap="2" align="center" justify="between">
+									<Flex direction="column" gap="1">
+										<Text style={{ color: syncAutoScroll ? undefined : "var(--gray-9)" }}>
+											{t(
+												"settings.common.syncFocusMainLine",
+												"Focus Main Line During Playback",
+											)}
+										</Text>
+										<Text size="1" color="gray">
+											{t(
+												"settings.common.syncFocusMainLineDesc",
+												"When playing back, focuses on active main lines and ignores background lines unless no main line is active.",
+											)}
+										</Text>
+									</Flex>
+									<Switch
+										disabled={!syncAutoScroll}
+										checked={syncFocusMainLine}
+										onCheckedChange={setSyncFocusMainLine}
 									/>
 								</Flex>
 							</Box>

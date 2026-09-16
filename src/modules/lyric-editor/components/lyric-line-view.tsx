@@ -62,6 +62,7 @@ import {
 import {
 	highlightActiveWordInEditAtom,
 	reverseSyncLineIdsAtom,
+	editActiveLineHighlightAtom,
 	syncLevelModeAtom,
 	visualizeTimestampUpdateAtom,
 } from "$/modules/settings/states/sync.ts";
