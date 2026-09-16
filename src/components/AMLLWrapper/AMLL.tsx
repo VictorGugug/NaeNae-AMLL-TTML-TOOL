@@ -72,7 +72,9 @@ export const AMLL = memo(() => {
 					interpolatedTime += dt * audioEngine.musicPlayBackRate;
 				}
 				lastRealTime = now;
-				setCurrentTime(interpolatedTime * 1000);
+				const durationSec = audioEngine.musicDuration;
+				const clampedTime = durationSec > 0 ? Math.min(interpolatedTime, durationSec) : interpolatedTime;
+				setCurrentTime(clampedTime * 1000);
 			}
 
 			rafId = requestAnimationFrame(loop);
@@ -111,11 +113,16 @@ export const AMLL = memo(() => {
                             const raw = (clicked && typeof clicked === "object" && "line" in clicked ? (clicked as { line?: unknown }).line : clicked);
                             const line = raw as { startTime?: number; id?: string } | null;
                             if (line && typeof line.startTime === "number") {
+                                const lineStartSec = line.startTime / 1000;
                                 setCurrentTimeAtom(line.startTime);
                                 if (line.id) {
                                     setSelectedLines(new Set([line.id]));
                                 }
-                                audioEngine.seekMusic(line.startTime / 1000);
+                                if (isPlaying || audioEngine.musicPlaying) {
+                                    void audioEngine.resumeOrSeekMusic(lineStartSec);
+                                } else {
+                                    audioEngine.seekMusic(lineStartSec);
+                                }
                             }
                         }}
                     />

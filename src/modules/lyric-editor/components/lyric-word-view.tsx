@@ -898,13 +898,9 @@ const LyricSyncWordView: FC<{
 	const wordContainerRef = useRef<HTMLDivElement>(null);
 	const lastClickTimeRef = useRef(0);
 
-	// Keep mutable refs for active-highlight settings to avoid re-subscribing on every settings change
 	const highlightActiveWordRef = useRef(highlightActiveWord);
 	const enableSyncGlowAnimationRef = useRef(enableSyncGlowAnimation);
 	const toolModeRef = useRef(toolMode);
-	useEffect(() => {
-		toolModeRef.current = toolMode;
-	}, [toolMode]);
 
 	const updateActive = useCallback(() => {
 		const el = wordContainerRef.current;
@@ -927,6 +923,10 @@ const LyricSyncWordView: FC<{
 	}, [store, startTime, endTime]);
 
 	useEffect(() => {
+		toolModeRef.current = toolMode;
+	}, [toolMode]);
+
+	useEffect(() => {
 		highlightActiveWordRef.current = highlightActiveWord;
 		updateActive();
 	}, [highlightActiveWord, updateActive]);
@@ -936,15 +936,10 @@ const LyricSyncWordView: FC<{
 		updateActive();
 	}, [enableSyncGlowAnimation, updateActive]);
 
-	// Re-apply active/animated classes synchronously on every React reconciliation
-	// pass so React updating className on the DOM element does not wipe out imperative classes.
 	useLayoutEffect(() => {
 		updateActive();
 	});
 
-	// Drive the active/animated classes imperatively via store.sub
-	// instead of subscribing to currentTimeAtom inside React (which causes ~60fps
-	// re-renders of every visible word).
 	useEffect(() => {
 		updateActive();
 		return store.sub(currentTimeAtom, updateActive);
@@ -1042,7 +1037,6 @@ const LyricSyncWordView: FC<{
 		? `+${endTime - startTime}ms`
 		: msToTimestamp(endTime);
 
-	// Optimized render loop for pre-playback word ambient highlighting
 	useEffect(() => {
 		if (!ambientHighlightRef.current) return;
 		if (!enableUpcomingWordHighlight) {
@@ -1062,13 +1056,11 @@ const LyricSyncWordView: FC<{
 					styles.active,
 				);
 
-			// Extend the highlight window by 50ms to sync with the React blue highlight render delay
 			if (
 				delta > -50 &&
 				!isBlueActive &&
 				(threshold <= 0 || delta <= threshold)
 			) {
-				// Cap effective delta at 0 so opacity stays at maximum (0.75) during the 50ms delay window
 				const effectiveDelta = Math.max(0, delta);
 				const opacity =
 					threshold > 0 ? 0.75 * (1 - effectiveDelta / threshold) : 0.75;
@@ -1082,7 +1074,6 @@ const LyricSyncWordView: FC<{
 			}
 		};
 
-		// Run immediately to establish initial state without waiting for playback
 		updateHighlight();
 
 		const unsub = store.sub(currentTimeAtom, updateHighlight);

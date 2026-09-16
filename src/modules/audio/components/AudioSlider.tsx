@@ -311,11 +311,12 @@ export const AudioSlider = memo(() => {
 
 		const syncClock = () => {
 			anchorAudioTime = audioEngine.musicCurrentTime;
-			setCurrentTime(Math.round(anchorAudioTime * 1000));
+			const duration = currentDuration;
+			const targetMs = Math.round(anchorAudioTime * 1000);
+			setCurrentTime(duration > 0 ? Math.min(targetMs, duration) : targetMs);
 		};
 
 		const handleTimeUpdate = () => {
-			// Correct stalls and long frame gaps without resetting the smooth clock.
 			if (Math.abs(audioEngine.musicCurrentTime - audioEngine.interpolatedCurrentTime) > 0.1) {
 				syncClock();
 			}
@@ -327,9 +328,11 @@ export const AudioSlider = memo(() => {
 				return;
 			}
 
-			setCurrentTime(
-				Math.round(audioEngine.interpolatedCurrentTime * 1000),
-			);
+			const duration = currentDuration;
+			const interpolatedMs = Math.round(audioEngine.interpolatedCurrentTime * 1000);
+			const clampedMs = duration > 0 ? Math.min(interpolatedMs, duration) : interpolatedMs;
+
+			setCurrentTime(clampedMs);
 			frameId = requestAnimationFrame(onFrame);
 		};
 
@@ -342,12 +345,21 @@ export const AudioSlider = memo(() => {
 			syncClock();
 			setAudioPlaying(false);
 		};
+		const handleEnded = () => {
+			if (currentDuration > 0) {
+				setCurrentTime(currentDuration);
+			} else {
+				syncClock();
+			}
+			setAudioPlaying(false);
+		};
 		const handleSeek = syncClock;
 		const handlePlaybackRateChange = syncClock;
 
 		audioEngine.addEventListener("music-unload", handleMusicUnload);
 		audioEngine.addEventListener("music-resume", handlePlay);
 		audioEngine.addEventListener("music-pause", handlePause);
+		audioEngine.addEventListener("music-ended", handleEnded);
 		audioEngine.addEventListener("music-seeked", handleSeek);
 		audioEngine.addEventListener("music-timeupdate", handleTimeUpdate);
 		audioEngine.addEventListener(
@@ -355,7 +367,6 @@ export const AudioSlider = memo(() => {
 			handlePlaybackRateChange,
 		);
 
-		// Start loop if already playing
 		if (audioEngine.musicPlaying) {
 			handlePlay();
 		}
@@ -367,6 +378,7 @@ export const AudioSlider = memo(() => {
 			audioEngine.removeEventListener("music-unload", handleMusicUnload);
 			audioEngine.removeEventListener("music-resume", handlePlay);
 			audioEngine.removeEventListener("music-pause", handlePause);
+			audioEngine.removeEventListener("music-ended", handleEnded);
 			audioEngine.removeEventListener("music-seeked", handleSeek);
 			audioEngine.removeEventListener("music-timeupdate", handleTimeUpdate);
 			audioEngine.removeEventListener(

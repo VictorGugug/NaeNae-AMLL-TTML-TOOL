@@ -14,7 +14,7 @@ import {
 	useState,
 } from "react";
 import { audioEngine } from "$/modules/audio/audio-engine";
-import { audioCoverArtAtom, currentTimeAtom } from "$/modules/audio/states";
+import { audioCoverArtAtom, audioPlayingAtom, currentTimeAtom } from "$/modules/audio/states";
 import { customBackgroundImageAtom } from "$/modules/settings/modals/customBackground";
 import {
 	customAccentColorAtom,
@@ -138,6 +138,7 @@ export const SpicyLyrics = memo(() => {
 	const useAccent = useAtomValue(useCustomAccentAtom);
 	const accent = useAtomValue(customAccentColorAtom);
 	const setCurrentTime = useSetAtom(currentTimeAtom);
+	const audioPlaying = useAtomValue(audioPlayingAtom);
 	const lines = useMemo(
 		() =>
 			buildSpicyLines(lyrics.lyricLines, simple, romanized, forceLineSynced),
@@ -783,8 +784,13 @@ export const SpicyLyrics = memo(() => {
 	}, [lines, simple, previewFollowsPlayback]);
 
 	const seek = (time: number) => {
+		const timeSec = time / 1000;
 		setCurrentTime(time);
-		audioEngine.seekMusic(time / 1000);
+		if (audioPlaying || audioEngine.musicPlaying) {
+			void audioEngine.resumeOrSeekMusic(timeSec);
+		} else {
+			audioEngine.seekMusic(timeSec);
+		}
 	};
 	// Two adjacent "harmony" (isDuetGroup) lines that share the same timing
 	// are two voices singing together at once, so they're paired side by

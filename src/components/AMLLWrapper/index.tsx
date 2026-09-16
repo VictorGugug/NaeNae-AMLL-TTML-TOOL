@@ -208,30 +208,21 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 				}
 				lastRealTime = now;
 
-				const displayMs = interpolatedTime * 1000;
-				
-				/**
-				 * Split-Rate Optimization:
-				 * 1. Visual updates (DOM) happen at the monitor's full refresh rate (rAF).
-				 * 2. Logic updates (React State) happen at a capped rate (max 60Hz) to save CPU.
-				 */
-				
-				// Update all registered active words directly via DOM
+				const durationSec = audioEngine.musicDuration;
+				const clampedTime = durationSec > 0 ? Math.min(interpolatedTime, durationSec) : interpolatedTime;
+				const displayMs = clampedTime * 1000;
+
 				wordRegistry.forEach(({ el, word }) => {
 					const progress = Math.min(Math.max((displayMs - word.startTime) / (word.endTime - word.startTime), 0), 1);
-					// Using simple rounding instead of toFixed to reduce string garbage
 					el.style.setProperty("--progress", `${Math.round(progress * 1000) / 10}%`);
 				});
 
 				if (vsync) {
-					// Even with vsync, we cap the React update if the frequency is extremely high, 
-					// but we allow 60Hz for logic consistency.
 					if (now - lastUpdateRef.current >= 16.6) { 
 						setDisplayTime(displayMs);
 						lastUpdateRef.current = now;
 					}
 				} else {
-					// Capped logic update (30Hz) when vsync is off to maximize efficiency
 					if (now - lastUpdateRef.current >= 33.3) { 
 						setDisplayTime(displayMs);
 						lastUpdateRef.current = now;
@@ -419,14 +410,24 @@ export const AMLLWrapper = memo(({ variant }: { variant?: "standard" | "toxi" })
 	}, [displayTime, lineGroups, previewFollowsPlayback, audioPlaying]);
 
 	const handleLineClick = (line: any) => {
+		const lineStartSec = line.startTime / 1000;
 		setCurrentTime(line.startTime);
 		setSelectedLines(new Set([line.id]));
-		audioEngine.seekMusic(line.startTime / 1000);
+		if (audioPlaying || audioEngine.musicPlaying) {
+			void audioEngine.resumeOrSeekMusic(lineStartSec);
+		} else {
+			audioEngine.seekMusic(lineStartSec);
+		}
 	};
 
 	const handleWordClick = (time: number) => {
+		const timeSec = time / 1000;
 		setCurrentTime(time);
-		audioEngine.seekMusic(time / 1000);
+		if (audioPlaying || audioEngine.musicPlaying) {
+			void audioEngine.resumeOrSeekMusic(timeSec);
+		} else {
+			audioEngine.seekMusic(timeSec);
+		}
 	};
 
 	const instantFade = useAtomValue(instantHighlightFadeAtom);

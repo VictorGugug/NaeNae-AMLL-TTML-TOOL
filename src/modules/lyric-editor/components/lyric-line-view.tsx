@@ -63,6 +63,7 @@ import {
 	reverseSyncLineIdsAtom,
 	editActiveLineHighlightAtom,
 	syncLevelModeAtom,
+	syncWordWrapAtom,
 	visualizeTimestampUpdateAtom,
 } from "$/modules/settings/states/sync.ts";
 import {
@@ -498,6 +499,7 @@ export const LyricLineView: FC<{
 	const showEndTimeAsDuration = useAtomValue(showEndTimeAsDurationAtom);
 	const toolMode = useAtomValue(toolModeAtom);
 	const syncLevelMode = useAtomValue(syncLevelModeAtom);
+	const syncWordWrap = useAtomValue(syncWordWrapAtom);
 	const reverseSyncLineIds = useAtomValue(reverseSyncLineIdsAtom);
 	const store = useStore();
 	const geniusCategorizationEnabled = useAtomValue(
@@ -1197,6 +1199,7 @@ export const LyricLineView: FC<{
 										styles.lyricWordsContainer,
 										toolMode === ToolMode.Edit && styles.edit,
 										toolMode === ToolMode.Sync && styles.sync,
+										toolMode === ToolMode.Sync && syncWordWrap && styles.wrap,
 										!showTimestamps && styles.hideTimestamps,
 									)}
 									ref={wordsContainerRef}

@@ -195,8 +195,9 @@ class AudioEngine extends EventTarget {
 
 	private _listenersSetup = false;
 	private suppressElementEvents = false;
+	private _isSeeking = false;
+	private _pendingSeekTime: number | null = null;
 
-	/** Link audio element events into engine events */
 	private setupAudioListeners() {
 		if (this._listenersSetup) return;
 		const audioEl = this._audioEl;
@@ -204,22 +205,50 @@ class AudioEngine extends EventTarget {
 
 		this._listenersSetup = true;
 
-		const events = {
-			play: "music-resume",
-			pause: "music-pause",
-			timeupdate: "music-timeupdate",
-			ended: "music-pause",
-			seeked: "music-seeked",
-			volumechange: "volume-change",
-			ratechange: "music-playback-rate-change",
-		};
-		Object.entries(events).forEach(([event, engineEvent]) => {
-			audioEl.addEventListener(event, () => {
-				if (this.suppressElementEvents) return;
-				this.dispatchEvent(new Event(engineEvent));
-			});
+		audioEl.addEventListener("play", () => {
+			if (this.suppressElementEvents) return;
+			this.startZoneTicker();
+			this.dispatchEvent(new Event("music-resume"));
 		});
-		audioEl.addEventListener("play", () => this.startZoneTicker());
+
+		audioEl.addEventListener("pause", () => {
+			if (this.suppressElementEvents) return;
+			this.dispatchEvent(new Event("music-pause"));
+		});
+
+		audioEl.addEventListener("timeupdate", () => {
+			if (this.suppressElementEvents) return;
+			const duration = this.musicDuration;
+			if (duration > 0 && audioEl.currentTime >= duration - 0.05 && !audioEl.paused) {
+				this.handlePlaybackEnded();
+				return;
+			}
+			this.dispatchEvent(new Event("music-timeupdate"));
+		});
+
+		audioEl.addEventListener("ended", () => {
+			if (this.suppressElementEvents) return;
+			this.handlePlaybackEnded();
+		});
+
+		audioEl.addEventListener("seeked", () => {
+			this._isSeeking = false;
+			this._pendingSeekTime = null;
+			this._lastReportedTime = audioEl.currentTime;
+			this._lastPerformanceTime = performance.now();
+			if (this.suppressElementEvents) return;
+			this.dispatchEvent(new Event("music-seeked"));
+		});
+
+		audioEl.addEventListener("volumechange", () => {
+			if (this.suppressElementEvents) return;
+			this.dispatchEvent(new Event("volume-change"));
+		});
+
+		audioEl.addEventListener("ratechange", () => {
+			if (this.suppressElementEvents) return;
+			this.dispatchEvent(new Event("music-playback-rate-change"));
+		});
 	}
 	//#endregion
 
@@ -245,13 +274,17 @@ class AudioEngine extends EventTarget {
 	get musicPlaying() {
 		if (this.zoneTransport) return true;
 		if (!this._audioEl) return false;
-		return !this._audioEl.paused && !this._audioEl.ended;
+		if (this._audioEl.paused || this._audioEl.ended) return false;
+		const duration = this.musicDuration;
+		if (duration > 0 && this._audioEl.currentTime >= duration) return false;
+		return true;
 	}
 
 	get musicCurrentTime() {
 		if (this.pausedZoneVirtualPos !== null) return this.pausedZoneVirtualPos;
 		const v = this.currentZoneVirtualPos;
 		if (v !== null) return v;
+		if (this._isSeeking && this._pendingSeekTime !== null) return this._pendingSeekTime;
 		return this._audioEl?.currentTime ?? 0;
 	}
 
@@ -263,9 +296,26 @@ class AudioEngine extends EventTarget {
 		const v = this.currentZoneVirtualPos;
 		if (v !== null) return v;
 		if (!this._audioEl) return 0;
-		if (!this.musicPlaying) return this._audioEl.currentTime;
+
+		const duration = this.musicDuration;
+
+		if (!this.musicPlaying) {
+			const t = this._isSeeking && this._pendingSeekTime !== null
+				? this._pendingSeekTime
+				: this._audioEl.currentTime;
+			return duration > 0 ? Math.min(t, duration) : t;
+		}
+
+		if (this._isSeeking && this._pendingSeekTime !== null) {
+			return this._pendingSeekTime;
+		}
 
 		const currentTime = this._audioEl.currentTime;
+		if (duration > 0 && currentTime >= duration - 0.05) {
+			this.handlePlaybackEnded();
+			return duration;
+		}
+
 		if (currentTime !== this._lastReportedTime) {
 			this._lastReportedTime = currentTime;
 			this._lastPerformanceTime = performance.now();
@@ -273,11 +323,24 @@ class AudioEngine extends EventTarget {
 		}
 
 		const dt = (performance.now() - this._lastPerformanceTime) / 1000;
-		return currentTime + dt * this._musicPlayBackRate;
+		const interpolated = currentTime + dt * this._musicPlayBackRate;
+
+		if (duration > 0 && interpolated >= duration) {
+			this.handlePlaybackEnded();
+			return duration;
+		}
+
+		return interpolated;
 	}
 
 	get musicDuration() {
-		return this._audioEl?.duration ?? 0;
+		if (this.musicBuffer && Number.isFinite(this.musicBuffer.duration) && this.musicBuffer.duration > 0) {
+			return this.musicBuffer.duration;
+		}
+		if (this._audioEl && Number.isFinite(this._audioEl.duration) && this._audioEl.duration > 0) {
+			return this._audioEl.duration;
+		}
+		return 0;
 	}
 
 	private _musicPlayBackRate = 1;
@@ -339,32 +402,82 @@ class AudioEngine extends EventTarget {
 		return this.ctx.outputLatency;
 	}
 
+	handlePlaybackEnded() {
+		this.cancelZoneTransport();
+		this.pausedZoneVirtualPos = null;
+		this.stopZoneTicker();
+		this.stopAudition();
+		const duration = this.musicDuration;
+		if (this._audioEl) {
+			this._audioEl.pause();
+			if (duration > 0) {
+				this._audioEl.currentTime = duration;
+			}
+		}
+		this._lastReportedTime = duration;
+		this._lastPerformanceTime = performance.now();
+		this.dispatchEvent(new Event("music-pause"));
+		this.dispatchEvent(new Event("music-ended"));
+	}
+
 	seekMusic(offset: number) {
 		if (!this._audioEl) return;
 		this.cancelZoneTransport();
 		this.pausedZoneVirtualPos = null;
-		this._audioEl.currentTime = offset;
-		this._lastReportedTime = offset;
+		const duration = this.musicDuration;
+		const clamped = duration > 0 ? Math.max(0, Math.min(offset, duration)) : Math.max(0, offset);
+
+		this._isSeeking = true;
+		this._pendingSeekTime = clamped;
+		this._audioEl.currentTime = clamped;
+		this._lastReportedTime = clamped;
 		this._lastPerformanceTime = performance.now();
+
+		if (this.musicPlaying) {
+			void this._audioEl.play().catch(() => {});
+		}
+
 		this.dispatchEvent(new Event("music-seeked"));
 	}
 
-	async resumeOrSeekMusic(offset = this.musicCurrentTime) {
+	async resumeOrSeekMusic(offset?: number) {
 		if (!this._audioEl) return;
-		if (offset === this.musicCurrentTime && this.pausedZoneVirtualPos !== null) {
+		const duration = this.musicDuration;
+		let targetOffset = offset ?? this.musicCurrentTime;
+
+		if (duration > 0 && (targetOffset >= duration - 0.1 || this._audioEl.ended)) {
+			targetOffset = 0;
+		}
+
+		if (targetOffset === this.musicCurrentTime && this.pausedZoneVirtualPos !== null) {
 			const v = this.pausedZoneVirtualPos;
 			this.pausedZoneVirtualPos = null;
 			await this.resumeContext();
 			await this.enterZoneTransport(v);
 			return;
 		}
+
 		this.pausedZoneVirtualPos = null;
+		this.cancelZoneTransport();
 		await this.resumeContext();
-		this._audioEl.currentTime = offset;
-		this._lastReportedTime = offset;
+
+		this._isSeeking = true;
+		this._pendingSeekTime = targetOffset;
+		this._audioEl.currentTime = targetOffset;
+		this._lastReportedTime = targetOffset;
 		this._lastPerformanceTime = performance.now();
-		this._audioEl.play();
-		this.dispatchEvent(new Event("music-resume"));
+
+		try {
+			await this._audioEl.play();
+			this._isSeeking = false;
+			this._pendingSeekTime = null;
+			this.dispatchEvent(new Event("music-resume"));
+		} catch (err) {
+			console.warn("[AudioEngine] resumeOrSeekMusic play failed:", err);
+			this._isSeeking = false;
+			this._pendingSeekTime = null;
+			this.dispatchEvent(new Event("music-pause"));
+		}
 	}
 
 	stopAudition() {
@@ -393,6 +506,8 @@ class AudioEngine extends EventTarget {
 	}
 
 	pauseMusic() {
+		this._isSeeking = false;
+		this._pendingSeekTime = null;
 		if (this.zoneTransport && this.zoneTransport.ctxStartedAt !== null) {
 			this.pausedZoneVirtualPos = this.currentZoneVirtualPos ?? this.zoneTransport.virtualBase;
 			this.cancelZoneTransport();
@@ -407,7 +522,7 @@ class AudioEngine extends EventTarget {
 
 	async auditionRange(startTimeInSeconds: number, endTimeInSeconds: number) {
 		if (!this.musicBuffer) {
-			console.warn("musicBuffer 为 null, 无法预览音频");
+			console.warn("[AudioEngine] musicBuffer is null, cannot audition range");
 			return;
 		}
 

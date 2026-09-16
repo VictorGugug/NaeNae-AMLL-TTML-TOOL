@@ -218,6 +218,7 @@
       "quickFixes": "快速修复",
       "manualTimestampEdit": "手动时间戳编辑",
       "displayOptions": "显示选项",
+      "wrapWords": "自动换行",
       "showTimestamps": "显示时间戳",
       "highlightActiveWord": "高亮活动单词",
       "enableGlowAnimation": "启用发光动画",

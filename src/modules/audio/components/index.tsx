@@ -62,9 +62,10 @@ const AudioPlaybackKeyBinding = memo(() => {
 	const store = useStore();
 
 	useKeyBindingAtom(keyPlayPauseAtom, () => {
-		if (audioEngine.musicPlaying) audioEngine.pauseMusic();
+		const isPlaying = store.get(audioPlayingAtom) || audioEngine.musicPlaying;
+		if (isPlaying) audioEngine.pauseMusic();
 		else audioEngine.resumeOrSeekMusic();
-	}, []);
+	}, [store]);
 
 	useKeyBindingAtom(keySeekForwardAtom, () => {
 		audioEngine.seekMusic(
@@ -141,12 +142,12 @@ export const AudioControls: FC = memo(() => {
 	}, [openFile]);
 
 	const onTogglePlay = useCallback(() => {
-		if (audioEngine.musicPlaying) {
+		if (audioPlaying || audioEngine.musicPlaying) {
 			audioEngine.pauseMusic();
 		} else {
 			audioEngine.resumeOrSeekMusic();
 		}
-	}, []);
+	}, [audioPlaying]);
 
 	useEffect(() => {
 		const onMusicLoad = () => {
@@ -222,7 +223,7 @@ export const AudioControls: FC = memo(() => {
 							<HoverCard.Content>
 								<Flex direction="column" align="center">
 									<Grid columns="0fr 7em 2em" gap="2" align="baseline">
-										<Text wrap="nowrap">{t("audioPanel.volume", "音量")}</Text>
+										<Text wrap="nowrap">{t("audioPanel.volume", "Volume")}</Text>
 										<Slider
 											min={0}
 											max={1}
@@ -234,7 +235,7 @@ export const AudioControls: FC = memo(() => {
 											{(volume * 100).toFixed()}%
 										</Text>
 										<Text wrap="nowrap">
-											{t("audioPanel.playbackRate", "播放速度")}
+											{t("audioPanel.playbackRate", "Playback Rate")}
 										</Text>
 										<Slider
 											min={0.1}
@@ -266,12 +267,12 @@ export const AudioControls: FC = memo(() => {
 										size="1"
 										color="gray"
 									>
-										{t("audioPanel.clickToLoadMusic", "点击图标按钮以加载音乐")}
+										{t("audioPanel.clickToLoadMusic", "Click icon to load music")}
 									</Text>
 								</Flex>
 							</HoverCard.Content>
 						</HoverCard.Root>
-						<Tooltip content={t("audioPanel.playPause", "暂停 / 播放音乐")}>
+						<Tooltip content={t("audioPanel.playPause", "Play / Pause")}>
 							<IconButton
 								my="2"
 								ml="0"
@@ -294,7 +295,7 @@ export const AudioControls: FC = memo(() => {
 							{msToTimestamp(currentDuration)}
 						</Text>
 						<Tooltip
-							content={t("audioPanel.expandSpectrogram", "展开 / 收起频谱图")}
+							content={t("audioPanel.expandSpectrogram", "Toggle spectrogram")}
 						>
 							<IconButton
 								my="2"

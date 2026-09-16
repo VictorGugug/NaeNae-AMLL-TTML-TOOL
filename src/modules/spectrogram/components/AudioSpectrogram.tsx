@@ -11,7 +11,7 @@ import {
 	Flex,
 	IconButton,
 	Popover,
-	Select,
+	SegmentedControl,
 	Slider,
 	Text,
 	Theme,
@@ -884,16 +884,15 @@ export const AudioSpectrogram: FC = memo(() => {
 					</Tooltip>
 
 					<Popover.Root>
-						<Tooltip
-							content={t("spectrogram.settings", "Spectrogram settings")}
-							side="left"
-						>
-							<Popover.Trigger>
-								<IconButton variant="ghost" color="gray">
-									<SettingsFilled />
-								</IconButton>
-							</Popover.Trigger>
-						</Tooltip>
+						<Popover.Trigger>
+							<IconButton
+								variant="ghost"
+								color="gray"
+								title={t("spectrogram.settings", "Spectrogram settings")}
+							>
+								<SettingsFilled />
+							</IconButton>
+						</Popover.Trigger>
 						<Popover.Content side="left" align="end" style={{ width: 220 }}>
 							<Flex direction="column" gap="3">
 								<Text size="2" weight="bold">
@@ -905,29 +904,24 @@ export const AudioSpectrogram: FC = memo(() => {
 										{t("spectrogram.fftSize", "FFT Size")} (
 										{t("spectrogram.resolution", "Resolution")})
 									</Text>
-									<Select.Root
+									<SegmentedControl.Root
+										size="1"
 										value={fftSize.toString()}
-										onValueChange={(v) => setFftSize(Number.parseInt(v))}
+										onValueChange={(v) => setFftSize(Number.parseInt(v, 10))}
 									>
-										<Select.Trigger />
-										<Select.Content>
-											<Select.Item value="512">
-												{t("spectrogram.fftSizeOption.512", "512 (Fast)")}
-											</Select.Item>
-											<Select.Item value="1024">
-												{t("spectrogram.fftSizeOption.1024", "1024 (Normal)")}
-											</Select.Item>
-											<Select.Item value="2048">
-												{t(
-													"spectrogram.fftSizeOption.2048",
-													"2048 (Better Freq)",
-												)}
-											</Select.Item>
-											<Select.Item value="4096">
-												{t("spectrogram.fftSizeOption.4096", "4096 (High Res)")}
-											</Select.Item>
-										</Select.Content>
-									</Select.Root>
+										<SegmentedControl.Item value="512">
+											{t("spectrogram.fftSizeOption.512", "512 (Fast)")}
+										</SegmentedControl.Item>
+										<SegmentedControl.Item value="1024">
+											{t("spectrogram.fftSizeOption.1024", "1024 (Normal)")}
+										</SegmentedControl.Item>
+										<SegmentedControl.Item value="2048">
+											{t("spectrogram.fftSizeOption.2048", "2048 (Better Freq)")}
+										</SegmentedControl.Item>
+										<SegmentedControl.Item value="4096">
+											{t("spectrogram.fftSizeOption.4096", "4096 (High Res)")}
+										</SegmentedControl.Item>
+									</SegmentedControl.Root>
 								</Flex>
 
 								<Flex align="center" gap="2">
