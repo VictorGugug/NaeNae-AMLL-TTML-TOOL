@@ -105,13 +105,11 @@ export const ImportLyricsDialog = ({
 	);
 	const setConfirmDialog = useSetAtom(confirmDialogAtom);
 
-	// Search
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<ImportTrack[]>([]);
 	const [searching, setSearching] = useState(false);
 	const [hasSearched, setHasSearched] = useState(false);
 
-	// Lyrics preview
 	const [selectedHit, setSelectedHit] = useState<ImportTrack | null>(null);
 	const [fetchingLyrics, setFetchingLyrics] = useState(false);
 	const [editableLyrics, setEditableLyrics] = useState("");
@@ -226,7 +224,7 @@ export const ImportLyricsDialog = ({
 					: source === "lrclib"
 						? (await LrcLibApi.search(query)).map((track) => ({
 								id: track.id,
-								name: track.name,
+								name: track.name || track.trackName || "",
 								artist: track.artistName,
 								album: track.albumName,
 								lyrics:
@@ -234,9 +232,11 @@ export const ImportLyricsDialog = ({
 									(track.syncedLyrics
 										? lrcToPlainLyrics(track.syncedLyrics)
 										: ""),
-								source: track.syncedLyrics
-									? "LRCLIB • synced lyrics available"
-									: "LRCLIB",
+								source: track.instrumental
+									? t("lrclib.sourceInstrumental", "LRCLIB • instrumental")
+									: track.syncedLyrics
+										? t("lrclib.sourceSynced", "LRCLIB • synced lyrics available")
+										: t("lrclib.sourcePlain", "LRCLIB"),
 							}))
 						: (await LyricallyApi.search(query)).map((track, index) => ({
 								id: `${track.artist}-${track.name}-${index}`,
@@ -249,13 +249,15 @@ export const ImportLyricsDialog = ({
 			setResults(hits);
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
-			toast.error(
-				t(
-					"metadataDialog.fetchSongwriters.searchError",
-					"Search failed: {error}",
-					{ error: msg },
-				),
-			);
+			const searchErrorKey =
+				source === "lrclib"
+					? "lrclib.searchError"
+					: "metadataDialog.fetchSongwriters.searchError";
+			const searchErrorFallback =
+				source === "lrclib"
+					? "LRCLIB search failed: {error}"
+					: "Search failed: {error}";
+			toast.error(t(searchErrorKey, searchErrorFallback, { error: msg }));
 		} finally {
 			setSearching(false);
 		}
@@ -268,7 +270,6 @@ export const ImportLyricsDialog = ({
 			setEditableLyrics("");
 			setIsEditing(false);
 
-			// Set TTML metadata and file name immediately
 			const title = hit.name;
 			const artist = hit.artist;
 			const safeFileName = `${artist} - ${title}.ttml`
@@ -444,7 +445,6 @@ export const ImportLyricsDialog = ({
 				return;
 			}
 
-			// Standard import: preserve source lines verbatim, including parentheses.
 			const processedLines: LyricLine[] = [];
 			let geniusHeader: string | undefined;
 
@@ -514,7 +514,6 @@ export const ImportLyricsDialog = ({
 				console.error("Genius songwriter fetch failed", error);
 			}
 
-			// Select first new word
 			if (processedLines.length > 0) {
 				store.set(selectedLinesAtom, new Set([processedLines[0].id]));
 				if (processedLines[0].words.length > 0) {
@@ -593,7 +592,6 @@ export const ImportLyricsDialog = ({
 		source,
 	]);
 
-	// ── Lyrics preview pane ────────────────────────────────────────────────────
 	if (source === "genius" && !geniusApiKey) {
 		return (
 			<Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
@@ -865,7 +863,6 @@ export const ImportLyricsDialog = ({
 		);
 	}
 
-	// ── Search pane ────────────────────────────────────────────────────────────
 	return (
 		<Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
 			<Dialog.Content style={{ maxWidth: 620, height: "72vh" }}>

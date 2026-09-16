@@ -903,6 +903,10 @@
 		"placeholder": "Title Artist...",
 		"notFound": "No results found, please try different keywords",
 		"noResult": "Enter keywords to start searching",
+		"searchError": "LRCLIB search failed: {error}",
+		"sourceInstrumental": "LRCLIB • instrumental",
+		"sourcePlain": "LRCLIB",
+		"sourceSynced": "LRCLIB • synced lyrics available",
 		"title": "Import Lyric from LRCLIB"
 	},
 	"lyricEditor": {

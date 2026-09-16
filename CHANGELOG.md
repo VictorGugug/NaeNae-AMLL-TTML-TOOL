@@ -40,6 +40,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **LRCLIB Import Search Diagnostics** : Identify requests with a `Lrclib-Client` header derived from the package metadata, report HTTP status codes on search and detail failures, surface the `Retry-After` delay when rate limited, fall back to `trackName` for result titles, and label instrumental tracks.
 - **Spectrogram Boundary Clamping** : Dynamically clamped spectrogram maximum height (`getAvailableSpectrogramMaxHeight`) to prevent the panel from obscuring the top RibbonBar or pushing the audio playback controls off-screen.
 - **Real-Time Viewport Scroll Adaptation** : Added `ResizeObserver` bindings across `LyricLinesView`, `AMLLWrapper`, and `SpicyLyrics` to instantaneously maintain centering on the active line when resizing panels or the window.
 - **TTML Parser XML Namespace Resolution** : Fallback query using `localName()` for `<meta>` and `<agent>` elements when TTML root or parent nodes lack default namespace prefixes.

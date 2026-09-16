@@ -1,70 +1,65 @@
 import type { LyricallyTrack } from "../types";
 
+type DeezerTrack = {
+	title: string;
+	artist?: { name: string };
+	album?: { title: string; cover_xl?: string; cover_medium?: string };
+};
+
+const secureCover = (rawCover: string): string =>
+	rawCover.replace("http://", "https://");
+
+const describeNetworkError = (error: unknown, action: string): string => {
+	const reason = error instanceof Error ? error.message : String(error);
+	return `Lyrics ${action} failed: ${reason}`;
+};
+
 export const LyricallyApi = {
-	/**
-	 * Search for lyrics using the aggregator API.
-	 * Swapped to api.lyrics.ovh which uses Deezer internally for search, resolving the offline domain paxsenix.biz.
-	 * @param query Search keywords (e.g. "Artist - Song")
-	 * @returns A list of potential matches with lyrics already included.
-	 */
 	async search(query: string): Promise<LyricallyTrack[]> {
 		if (!query.trim()) return [];
 
+		let res: Response;
 		try {
-			const res = await fetch(`https://api.lyrics.ovh/suggest/${encodeURIComponent(query)}`);
-			if (!res.ok) throw new Error("Search failed");
-			const json = await res.json();
-			
-			// Map Deezer response to our track format
-			return (json.data || []).map((track: {
-				title: string;
-				artist?: { name: string };
-				album?: { title: string; cover_xl?: string; cover_medium?: string };
-			}) => {
-				const rawCover = track.album?.cover_xl || track.album?.cover_medium || "";
-				// Deezer API returns http:// which causes mixed-content errors on Vercel
-				const secureCover = rawCover.replace("http://", "https://");
-				
-				return {
-					name: track.title,
-					artist: track.artist?.name || "Unknown Artist",
-					album: track.album?.title || "",
-					cover: secureCover,
-					source: "lyrics.ovh",
-					lyrics: "" // Fetched lazily
-				};
-			});
-
+			res = await fetch(
+				`https://api.lyrics.ovh/suggest/${encodeURIComponent(query)}`,
+			);
 		} catch (error) {
-			console.error("Lyrics API Error:", error);
-			throw error;
+			throw new Error(describeNetworkError(error, "search"));
 		}
+		if (!res.ok) throw new Error(`Lyrics search failed: ${res.status}`);
+		const json = await res.json();
+
+		return (json.data || []).map((track: DeezerTrack) => {
+			const rawCover = track.album?.cover_xl || track.album?.cover_medium || "";
+			return {
+				name: track.title,
+				artist: track.artist?.name || "Unknown Artist",
+				album: track.album?.title || "",
+				cover: secureCover(rawCover),
+				source: "lyrics.ovh",
+				lyrics: "",
+			};
+		});
 	},
 
-	/**
-	 * Get lyrics directly for a specific song and artist.
-	 * @param name Song name
-	 * @param artist Artist name
-	 */
 	async getLyrics(name: string, artist: string): Promise<LyricallyTrack> {
+		let res: Response;
 		try {
-			const res = await fetch(
-				`https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(name)}`
+			res = await fetch(
+				`https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(name)}`,
 			);
-			if (!res.ok) throw new Error("Lyrics not found on public database.");
-			
-			const data = await res.json();
-			return {
-				name,
-				artist,
-				source: "lyrics.ovh",
-				lyrics: data.lyrics || ""
-			};
 		} catch (error) {
-			console.error("Lyrics API Error:", error);
-			throw error;
+			throw new Error(describeNetworkError(error, "fetch"));
 		}
+		if (!res.ok)
+			throw new Error(`Lyrics not found on public database (${res.status}).`);
+
+		const data = await res.json();
+		return {
+			name,
+			artist,
+			source: "lyrics.ovh",
+			lyrics: data.lyrics || "",
+		};
 	},
 };
-
-

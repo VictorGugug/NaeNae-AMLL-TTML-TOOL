@@ -1,48 +1,71 @@
+import { GIT_REPO_URL } from "virtual:buildmeta";
+import packageMetadata from "../../../../package.json";
 import type { LrcLibTrack } from "../types";
 
 const BASE_URL = "https://lrclib.net/api";
+const clientId = `${packageMetadata.name} ${packageMetadata.version} (${GIT_REPO_URL})`;
+
+const clientHeaders = (): HeadersInit => ({
+	"Lrclib-Client": clientId,
+});
+
+async function describeError(
+	response: Response,
+	action: string,
+): Promise<string> {
+	if (response.status === 429) {
+		const retryAfter = Number(response.headers.get("Retry-After"));
+		const delay =
+			Number.isFinite(retryAfter) && retryAfter >= 0 ? retryAfter : 0;
+		return `LRCLIB ${action} failed: rate limited, retry in ${delay}s (429)`;
+	}
+	let detail = "";
+	try {
+		detail = (await response.text()).slice(0, 160).trim();
+	} catch {
+		detail = "";
+	}
+	return `LRCLIB ${action} failed: ${response.status}${detail ? ` (${detail})` : ""}`;
+}
+
+function describeNetworkError(error: unknown, action: string): string {
+	const reason = error instanceof Error ? error.message : String(error);
+	return `LRCLIB ${action} failed: ${reason}`;
+}
 
 export const LrcLibApi = {
-	/**
-	 * 搜索歌曲
-	 * @param query 搜索关键词 (如 "歌名 歌手")
-	 * @returns @see {@link LrcLibTrack}
-	 * @throws 在 API 请求失败时抛出错误
-	 */
 	async search(query: string): Promise<LrcLibTrack[]> {
 		if (!query.trim()) return [];
 
+		let response: Response;
 		try {
-			const response = await fetch(
+			response = await fetch(
 				`${BASE_URL}/search?q=${encodeURIComponent(query)}`,
+				{
+					headers: clientHeaders(),
+				},
 			);
-			if (!response.ok) {
-				throw new Error(`LRCLIB Search failed: ${response.statusText}`);
-			}
-			const data = (await response.json()) as LrcLibTrack[];
-			return data;
 		} catch (error) {
-			console.error("LRCLIB API Error:", error);
-			throw error;
+			throw new Error(describeNetworkError(error, "search"));
 		}
+		if (!response.ok) {
+			throw new Error(await describeError(response, "search"));
+		}
+		return (await response.json()) as LrcLibTrack[];
 	},
 
-	/**
-	 * 根据 ID 获取歌曲详情
-	 * @param id 歌曲 ID
-	 * @returns @see {@link LrcLibTrack}
-	 * @throws 在 API 请求失败时抛出错误
-	 */
 	async getById(id: number): Promise<LrcLibTrack> {
+		let response: Response;
 		try {
-			const response = await fetch(`${BASE_URL}/get/${id}`);
-			if (!response.ok) {
-				throw new Error(`LRCLIB Get failed: ${response.statusText}`);
-			}
-			return (await response.json()) as LrcLibTrack;
+			response = await fetch(`${BASE_URL}/get/${id}`, {
+				headers: clientHeaders(),
+			});
 		} catch (error) {
-			console.error("LRCLIB API Error:", error);
-			throw error;
+			throw new Error(describeNetworkError(error, "get"));
 		}
+		if (!response.ok) {
+			throw new Error(await describeError(response, "get"));
+		}
+		return (await response.json()) as LrcLibTrack;
 	},
 };
