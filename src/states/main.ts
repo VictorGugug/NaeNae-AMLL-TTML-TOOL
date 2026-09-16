@@ -34,6 +34,7 @@ export enum ToolMode {
 }
 
 export const toolModeAtom = atom<ToolMode>(ToolMode.Edit);
+export const previousToolModeAtom = atom<ToolMode | null>(null);
 export const aiSyncPickModeAtom = atom(false);
 
 export const showPreviewPanelAtom = atom(false);

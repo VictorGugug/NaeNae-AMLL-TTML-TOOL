@@ -187,7 +187,8 @@
 			"previewPanel": "Preview Panel",
 			"playbackTracking": "Tracking",
 			"autoScroll": "Auto-Scroll",
-			"highlightActiveLine": "Highlight Line"
+			"highlightActiveLine": "Highlight Line",
+			"syncTab": "Sync Tab"
 		},
 		"previewMode": {
 			"mode": "Mode",
@@ -247,6 +248,7 @@
 			"playbackTracking": "Tracking",
 			"autoScroll": "Auto-Scroll",
 			"highlightActiveLine": "Highlight Line",
+			"syncTab": "Sync Tab",
 			"spectrogramHoverSync": "Sync to Spectrogram Cursor",
 			"wrapWords": "Wrap Words"
 		},
@@ -295,6 +297,8 @@
 			"syncAutoScrollDesc": "Automatically scrolls the editor view to follow the currently active lyric line during playback.",
 			"syncFocusMainLine": "Focus Main Line During Playback",
 			"syncFocusMainLineDesc": "When playing back, focuses on active main lines and ignores background lines unless no main line is active.",
+			"syncTabPosition": "Sync Position Across Tabs",
+			"syncTabPositionDesc": "Maintains song playback and centers the active lyric line when switching between Edit, Time, and Preview tabs.",
 			"highlightActiveLine": "Highlight Active Line During Playback",
 			"highlightActiveLineDesc": "Visually highlights the lyric line currently being played in both Edit and Time modes.",
 			"smartFirstWord": "Smart First Word",

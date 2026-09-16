@@ -51,7 +51,6 @@ import {
 import {
 	advGeniusHeaderColorAtom,
 	compactBGInSyncAtom,
-	editActiveLineHighlightAtom,
 	geniusCategorizationEnabledAtom,
 	legacySpaceLabelsAtom,
 	showLineRomanizationAtom,

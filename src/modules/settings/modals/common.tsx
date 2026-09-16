@@ -1,6 +1,7 @@
 import resources from "virtual:i18next-loader";
 import {
 	ArrowSortDownLines24Regular,
+	ArrowSync24Regular,
 	ContentView24Regular,
 	Highlight24Regular,
 	History24Regular,
@@ -8,10 +9,8 @@ import {
 	LocalLanguage24Regular,
 	PaddingLeft24Regular,
 	PaddingRight24Regular,
-	PaintBrush24Regular,
 	Save24Regular,
 	Speaker224Regular,
-	Sparkle24Regular,
 	Stack24Regular,
 	Target24Regular,
 	TextWrap24Regular,
@@ -52,7 +51,6 @@ import {
 	smartLastWordAtom,
 	syncJudgeModeAtom,
 } from "$/modules/settings/states";
-import { editorAutoScrollEnabledAtom } from "$/modules/settings/states/preview";
 import {
 	editActiveLineHighlightAtom,
 	enableUpcomingWordHighlightAtom,
@@ -60,9 +58,9 @@ import {
 	reversePlaybackEnabledAtom,
 	syncCommitOffsetAtom,
 	syncFghToHoverAtom,
-	editActiveLineHighlightAtom,
 	syncAutoScrollAtom,
 	syncFocusMainLineAtom,
+	syncTabPositionAtom,
 	syncWordWrapAtom,
 	syncTimeOffsetAtom,
 	upcomingWordHighlightColorAtom,
@@ -127,11 +125,11 @@ export const SettingsCommonTab = ({
 	const [highlightActiveWordInEdit, setHighlightActiveWordInEdit] = useAtom(
 		highlightActiveWordInEditAtom,
 	);
-	const [editorAutoScroll, setEditorAutoScroll] = useAtom(editorAutoScrollEnabledAtom);
 	const [editActiveHighlight, setEditActiveHighlight] = useAtom(editActiveLineHighlightAtom);
 	const [editActiveLineHighlight, setEditActiveLineHighlight] = useAtom(
 		editActiveLineHighlightAtom,
 	);
+	const [syncTabPosition, setSyncTabPosition] = useAtom(syncTabPositionAtom);
 
 	const { t, i18n } = useTranslation();
 	const currentLanguage = i18n.resolvedLanguage || i18n.language;
@@ -431,35 +429,6 @@ export const SettingsCommonTab = ({
 				<Heading size="4">
 					{t("settings.group.editorViewport", "Editor Viewport & Playback")}
 				</Heading>
-				<Card>
-					<Text as="label">
-						<Flex gap="3" align="center">
-							<ContentView24Regular />
-							<Box flexGrow="1">
-								<Flex gap="2" align="center" justify="between">
-									<Flex direction="column" gap="1">
-										<Text>
-											{t(
-												"settingsDialog.preview.editorAutoScroll",
-												"Auto-scroll to active line",
-											)}
-										</Text>
-										<Text size="1" color="gray">
-											{t(
-												"settingsDialog.preview.editorAutoScrollDesc",
-												"Smoothly scroll the editor viewport to keep the active line in view during playback",
-											)}
-										</Text>
-									</Flex>
-									<Switch
-										checked={editorAutoScroll}
-										onCheckedChange={setEditorAutoScroll}
-									/>
-								</Flex>
-							</Box>
-						</Flex>
-					</Text>
-				</Card>
 				<Card>
 					<Text as="label">
 						<Flex gap="3" align="center">
@@ -901,6 +870,35 @@ export const SettingsCommonTab = ({
 									<Switch
 										checked={editActiveLineHighlight}
 										onCheckedChange={setEditActiveLineHighlight}
+									/>
+								</Flex>
+							</Box>
+						</Flex>
+					</Text>
+				</Card>
+				<Card>
+					<Text as="label">
+						<Flex gap="3" align="center">
+							<ArrowSync24Regular />
+							<Box flexGrow="1">
+								<Flex gap="2" align="center" justify="between">
+									<Flex direction="column" gap="1">
+										<Text>
+											{t(
+												"settings.common.syncTabPosition",
+												"Sync Position Across Tabs",
+											)}
+										</Text>
+										<Text size="1" color="gray">
+											{t(
+												"settings.common.syncTabPositionDesc",
+												"Maintain song playback and center the active lyric line when switching between Edit, Time, and Preview tabs.",
+											)}
+										</Text>
+									</Flex>
+									<Switch
+										checked={syncTabPosition}
+										onCheckedChange={setSyncTabPosition}
 									/>
 								</Flex>
 							</Box>

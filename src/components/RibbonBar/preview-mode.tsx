@@ -47,6 +47,7 @@ export const PreviewModeRibbonBar: FC<{ isSidebar?: boolean }> = forwardRef<
 	const [previewModeType, setPreviewModeType] = useAtom(previewModeTypeAtom);
 	const [useOriginalPreviewStyle, setUseOriginalPreviewStyle] = useAtom(
 		useOriginalPreviewStyleAtom,
+	);
 	const [timingOverviewAutoScroll, setTimingOverviewAutoScroll] = useAtom(
 		timingOverviewAutoScrollAtom,
 	);
