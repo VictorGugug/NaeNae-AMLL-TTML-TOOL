@@ -314,6 +314,9 @@ export const TimingOverview = memo(() => {
 				}
 			}
 		}
+				}
+			}
+		}
 		if (activeIndex === -1 || activeIndex === lastActiveIndexRef.current) return;
 
 		if (!audioPlaying && lastActiveIndexRef.current !== -1) {
@@ -379,23 +382,23 @@ export const TimingOverview = memo(() => {
 						<Text size="1">{t("timingOverview.duration", "Duration")}:</Text>
 						<Text size="1" weight="bold" className={styles.monospaced}>{msToTimestamp(stats.totalMs)}</Text>
 					</div>
-					<div className={styles.statItem}>
-						<SegmentedControl.Root
-							value={orderMode}
-							onValueChange={(v) => {
-								lastActiveIndexRef.current = undefined;
-								setOrderMode(v as TimingOverviewOrderMode);
-							}}
-							size="1"
-						>
-							<SegmentedControl.Item value="chronological">
-								{t("timingOverview.orderChronological", "Chronological")}
-							</SegmentedControl.Item>
-							<SegmentedControl.Item value="textual">
-								{t("timingOverview.orderTextual", "Textual")}
-							</SegmentedControl.Item>
-						</SegmentedControl.Root>
-					</div>
+		<div className={styles.statItem}>
+			<SegmentedControl.Root
+				value={orderMode}
+				onValueChange={(v) => {
+					lastActiveIndexRef.current = undefined;
+					setOrderMode(v as TimingOverviewOrderMode);
+				}}
+				size="1"
+			>
+				<SegmentedControl.Item value="chronological">
+					{t("timingOverview.orderChronological", "Chronological")}
+				</SegmentedControl.Item>
+				<SegmentedControl.Item value="textual">
+					{t("timingOverview.orderTextual", "Textual")}
+				</SegmentedControl.Item>
+			</SegmentedControl.Root>
+		</div>
 					<div
 						className={styles.statItem}
 						style={{
@@ -422,7 +425,7 @@ export const TimingOverview = memo(() => {
 						<div style={{ width: "80px", padding: "8px 12px", fontWeight: 500, color: "var(--gray-11)", fontSize: "12px" }}>{t("timingOverview.duration", "Duration")}</div>
 						<div style={{ flexGrow: 1, padding: "8px 12px", fontWeight: 500, color: "var(--gray-11)", fontSize: "12px" }}>{t("timingOverview.lyricsAndTimings", "Lyrics & Word Timings")}</div>
 					</div>
-					<ViewportList ref={viewportListRef} items={displayedLines} viewportRef={scrollRef}>
+			<ViewportList ref={viewportListRef} items={displayedLines} viewportRef={scrollRef}>
 						{(line, index) => (
 							<LineRow 
 								key={line.id || index} 
