@@ -314,9 +314,6 @@ export const TimingOverview = memo(() => {
 				}
 			}
 		}
-				}
-			}
-		}
 		if (activeIndex === -1 || activeIndex === lastActiveIndexRef.current) return;
 
 		if (!audioPlaying && lastActiveIndexRef.current !== -1) {
