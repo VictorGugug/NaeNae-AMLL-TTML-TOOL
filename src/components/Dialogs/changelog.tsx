@@ -55,6 +55,23 @@ export function ChangelogDialog() {
 				>
 					<Flex direction="column" gap="5" pr="4">
 						<Box>
+							<Heading size="4" mb="2" color="iris">
+								Unreleased Updates
+							</Heading>
+							<Flex direction="column" gap="3">
+								<Text size="2">
+									<strong>Color Picker Performance:</strong> Appearance color pickers now
+									preview live while dragging and apply the final color once, avoiding
+									UI stalls while choosing accent, gradient, and advanced colors.
+								</Text>
+								<Text size="2">
+									<strong>Fuller Presets:</strong> Appearance presets now also save the
+									app font, interface scale, gradient accent sync, custom background
+									settings, and legacy space labels.
+								</Text>
+							</Flex>
+						</Box>
+						<Box>
 							<Heading size="4" mb="2" color="green">
 								v0.10.2 Updates (Windows Install Fix)
 							</Heading>

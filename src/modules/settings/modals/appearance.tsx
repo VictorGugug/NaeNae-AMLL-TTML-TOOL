@@ -34,7 +34,7 @@ import {
 	Tooltip,
 } from "@radix-ui/themes";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, memo, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Reorder } from "framer-motion";
 import { backgroundGradients } from "$/modules/settings/states/gradients";
@@ -90,6 +90,9 @@ import {
 	vRibbonPositionAtom,
 	legacyDarkThemeAtom,
 	interfaceScaleAtom,
+	appFontStyleAtom,
+	appFontWeightAtom,
+	syncGradientToAccentAtom,
 } from "$/modules/settings/states/index.ts";
 import {
 	DEFAULT_INTERFACE_SCALE,
@@ -102,6 +105,10 @@ import { generateGradient, generateRadixScale } from "$/utils/colorScale";
 import {
 	SettingsCustomBackgroundCard,
 	SettingsCustomBackgroundSettings,
+	customBackgroundBlurAtom,
+	customBackgroundBrightnessAtom,
+	customBackgroundMaskAtom,
+	customBackgroundOpacityAtom,
 } from "./customBackground";
 
 const accentColors = [
@@ -140,17 +147,6 @@ export const SettingsAppearanceTab = () => {
 		customAccentColorAtom,
 	);
 	const isDarkTheme = useAtomValue(isDarkThemeAtom);
-	const customScale = useMemo(
-		() =>
-			generateRadixScale(
-				customAccentColor,
-				isDarkTheme,
-			),
-		[
-			customAccentColor,
-			isDarkTheme,
-		],
-	);
 
 	const [backgroundMode, setBackgroundMode] = useAtom(backgroundModeAtom);
 	const [selectedGradient, setSelectedGradient] = useAtom(selectedGradientAtom);
@@ -212,7 +208,14 @@ export const SettingsAppearanceTab = () => {
 	const [vRibbonPos, setVRibbonPos] = useAtom(vRibbonPositionAtom);
 	const [newPresetName, setNewPresetName] = useState("");
 
-	const appFont = useAtomValue(appFontAtom);
+	const [appFont, setAppFont] = useAtom(appFontAtom);
+	const [appFontStyle, setAppFontStyle] = useAtom(appFontStyleAtom);
+	const [appFontWeight, setAppFontWeight] = useAtom(appFontWeightAtom);
+	const [syncGradientToAccent, setSyncGradientToAccent] = useAtom(syncGradientToAccentAtom);
+	const [customBgOpacity, setCustomBgOpacity] = useAtom(customBackgroundOpacityAtom);
+	const [customBgMask, setCustomBgMask] = useAtom(customBackgroundMaskAtom);
+	const [customBgBlur, setCustomBgBlur] = useAtom(customBackgroundBlurAtom);
+	const [customBgBrightness, setCustomBgBrightness] = useAtom(customBackgroundBrightnessAtom);
 	const [glassBlur, setGlassBlur] = useAtom(glassmorphismBlurAtom);
 	const [interfaceScale, setInterfaceScale] = useAtom(interfaceScaleAtom);
 	const [interfaceScaleDraft, setInterfaceScaleDraft] = useState(interfaceScale);
@@ -231,17 +234,23 @@ export const SettingsAppearanceTab = () => {
 			settings: {
 				// Basic & General
 				accentColor, useCustomAccent, customAccentColor, glassBlur,
+				appFont, appFontStyle, appFontWeight,
+				interfaceScale,
 				// Backgrounds
 				backgroundMode, selectedGradient, useCustomGradient, customGradientColors,
 				customGradientType, customGradientOpacity, customGradientCenter,
-				customGradientAngle, customGradientSize,
+				customGradientAngle, customGradientSize, syncGradientToAccent,
+				customBackgroundOpacity: customBgOpacity,
+				customBackgroundMask: customBgMask,
+				customBackgroundBlur: customBgBlur,
+				customBackgroundBrightness: customBgBrightness,
 				// Advanced
 				advWaveformColor, advWaveformProgress, advPrimaryText, advSecondaryText,
 				vTitlebarBg, vSidebarBg, vSidebarActive, vMenuHover, vEditorBg, vActiveLine, vLineHover, vSelection,
 				vChipRadius, vChipGap, vChipPaddingV, vChipPaddingH, vRomanColor, vTransColor, vGeniusHeaderColor,
 				vAudioBarBg, vAudioBarText, vScrollbar, vDialogBg, vDialogBorder,
 				vGlobalRadius, vGlobalBorderWidth, vShadow, vBackdrop,
-				layoutOrder, vRibbonPos, legacyDarkTheme
+				layoutOrder, vRibbonPos, legacyDarkTheme, legacySpaceLabels,
 			}
 		};
 		setPresets([...presets, newPreset]);
@@ -260,6 +269,14 @@ export const SettingsAppearanceTab = () => {
 		if (s.customAccentColor !== undefined) setCustomAccentColor(s.customAccentColor);
 		if (s.glassBlur !== undefined) setGlassBlur(Number(s.glassBlur));
 
+		if (s.appFont !== undefined) setAppFont(s.appFont);
+		if (s.appFontStyle !== undefined) setAppFontStyle(s.appFontStyle);
+		if (s.appFontWeight !== undefined) setAppFontWeight(s.appFontWeight);
+		if (s.interfaceScale !== undefined) {
+			setInterfaceScale(Number(s.interfaceScale));
+			setInterfaceScaleDraft(Number(s.interfaceScale));
+		}
+
 		// Backgrounds
 		if (s.backgroundMode !== undefined) setBackgroundMode(s.backgroundMode);
 		if (s.selectedGradient !== undefined) setSelectedGradient(s.selectedGradient);
@@ -270,7 +287,13 @@ export const SettingsAppearanceTab = () => {
 		if (s.customGradientCenter !== undefined) setCustomGradientCenter(s.customGradientCenter);
 		if (s.customGradientAngle !== undefined) setCustomGradientAngle(Number(s.customGradientAngle));
 		if (s.customGradientSize !== undefined) setCustomGradientSize(Number(s.customGradientSize));
+		if (s.syncGradientToAccent !== undefined) setSyncGradientToAccent(!!s.syncGradientToAccent);
+		if (s.customBackgroundOpacity !== undefined) setCustomBgOpacity(Number(s.customBackgroundOpacity));
+		if (s.customBackgroundMask !== undefined) setCustomBgMask(s.customBackgroundMask);
+		if (s.customBackgroundBlur !== undefined) setCustomBgBlur(Number(s.customBackgroundBlur));
+		if (s.customBackgroundBrightness !== undefined) setCustomBgBrightness(Number(s.customBackgroundBrightness));
 		if (s.legacyDarkTheme !== undefined) setLegacyDarkTheme(!!s.legacyDarkTheme);
+		if (s.legacySpaceLabels !== undefined) setLegacySpaceLabels(!!s.legacySpaceLabels);
 
 		// Advanced
 		if (s.advWaveformColor !== undefined) setAdvWaveformColor(s.advWaveformColor);
@@ -418,42 +441,11 @@ export const SettingsAppearanceTab = () => {
 									</Flex>
 
 									{useCustomAccent ? (
-										<Flex direction="column" gap="3">
-											<Flex align="center" gap="3">
-												<input
-													type="color"
-													value={customAccentColor}
-													onChange={(e) => {
-														const newColor = e.target.value;
-														setCustomAccentColor(newColor);
-													}}
-													style={{
-														width: "40px",
-														height: "40px",
-														padding: 0,
-														border: "none",
-														borderRadius: "var(--radius-3)",
-														cursor: "pointer",
-														backgroundColor: "transparent",
-													}}
-												/>
-												<Text size="2" weight="bold">
-													{customAccentColor.toUpperCase()}
-												</Text>
-											</Flex>
-											<Grid columns="12" gap="1">
-												{Array.from({ length: 12 }).map((_, i) => (
-													<Box
-														key={`shade-${i + 1}`}
-														style={{
-															height: "20px",
-															borderRadius: "var(--radius-1)",
-															backgroundColor: customScale[`--accent-${i + 1}`],
-														}}
-													/>
-												))}
-											</Grid>
-										</Flex>
+										<CustomAccentColorControl
+											color={customAccentColor}
+											onChange={setCustomAccentColor}
+											isDarkTheme={isDarkTheme}
+										/>
 									) : (
 										<Grid columns="8" gap="2">
 											{accentColors.map((color) => (
@@ -604,11 +596,9 @@ export const SettingsAppearanceTab = () => {
 													{customGradientColors.map((color, idx) => (
 														// biome-ignore lint/suspicious/noArrayIndexKey: primitive array without unique IDs
 														<Flex key={idx} align="center" gap="2">
-															<input
-																type="color"
+															<DebouncedColorInput
 																value={color}
-																onChange={(e) => {
-																	const newColor = e.target.value;
+																onChange={(newColor) => {
 																	const newColors = [...customGradientColors];
 																	newColors[idx] = newColor;
 																	setCustomGradientColors(newColors);
@@ -1008,7 +998,7 @@ export const SettingsAppearanceTab = () => {
 													<Text>{t("settings.appearance.advanced.primaryText", "Primary Text Color")}</Text>
 													<Text size="1" color="gray">{t("settings.appearance.advanced.primaryTextDesc", "Global primary text override.")}</Text>
 												</Flex>
-												<input type="color" value={advPrimaryText || "#ffffff"} onChange={(e) => setAdvPrimaryText(e.target.value)} style={{ width: "32px", height: "32px" }} />
+												<DebouncedColorInput value={advPrimaryText || "#ffffff"} cssVar="--gray-12" onChange={setAdvPrimaryText} style={{ width: "32px", height: "32px", border: "1px solid var(--gray-5)", borderRadius: "4px", cursor: "pointer", padding: 0 }} />
 											</Flex>
 
 											<Flex align="center" justify="between">
@@ -1016,7 +1006,7 @@ export const SettingsAppearanceTab = () => {
 													<Text>{t("settings.appearance.advanced.secondaryText", "Secondary Text Color")}</Text>
 													<Text size="1" color="gray">{t("settings.appearance.secondaryDesc", "Translations & Metadata.")}</Text>
 												</Flex>
-												<input type="color" value={advSecondaryText || "#888888"} onChange={(e) => setAdvSecondaryText(e.target.value)} style={{ width: "32px", height: "32px" }} />
+												<DebouncedColorInput value={advSecondaryText || "#888888"} cssVar="--gray-11" onChange={setAdvSecondaryText} style={{ width: "32px", height: "32px", border: "1px solid var(--gray-5)", borderRadius: "4px", cursor: "pointer", padding: 0 }} />
 											</Flex>
 										</Flex>
 									</Box>
@@ -1029,10 +1019,10 @@ export const SettingsAppearanceTab = () => {
 						<Heading size="4"><ContentView24Regular /> {t("settings.appearance.advanced.workspace", "Workspace Theme")}</Heading>
 						<Card>
 							<Grid columns="2" gap="3">
-								<AdvancedColorItem label={t("settings.appearance.advanced.titlebarBackground", "Titlebar Background")} value={vTitlebarBg} onChange={setVTitlebarBg} />
-								<AdvancedColorItem label={t("settings.appearance.advanced.sidebarBackground", "Sidebar Background")} value={vSidebarBg} onChange={setVSidebarBg} />
-								<AdvancedColorItem label={t("settings.appearance.advanced.activeItemHighlight", "Active Item Highlight")} value={vSidebarActive} onChange={setVSidebarActive} />
-								<AdvancedColorItem label={t("settings.appearance.advanced.menuHoverColor", "Menu Hover Color")} value={vMenuHover} onChange={setVMenuHover} />
+								<AdvancedColorItem label={t("settings.appearance.advanced.titlebarBackground", "Titlebar Background")} value={vTitlebarBg} cssVar="--titlebar-bg" onChange={setVTitlebarBg} />
+								<AdvancedColorItem label={t("settings.appearance.advanced.sidebarBackground", "Sidebar Background")} value={vSidebarBg} cssVar="--sidebar-bg" onChange={setVSidebarBg} />
+								<AdvancedColorItem label={t("settings.appearance.advanced.activeItemHighlight", "Active Item Highlight")} value={vSidebarActive} cssVar="--sidebar-active" onChange={setVSidebarActive} />
+								<AdvancedColorItem label={t("settings.appearance.advanced.menuHoverColor", "Menu Hover Color")} value={vMenuHover} cssVar="--menu-hover" onChange={setVMenuHover} />
 							</Grid>
 						</Card>
 					</Flex>
@@ -1042,10 +1032,10 @@ export const SettingsAppearanceTab = () => {
 						<Card>
 							<Flex direction="column" gap="4">
 								<Grid columns="2" gap="3">
-									<AdvancedColorItem label={t("settings.appearance.advanced.editorCanvas", "Editor Canvas")} value={vEditorBg} onChange={setVEditorBg} />
-									<AdvancedColorItem label={t("settings.appearance.advanced.activeLineHighlight", "Active Line Highlight")} value={vActiveLine} onChange={setVActiveLine} />
-									<AdvancedColorItem label={t("settings.appearance.advanced.lineHoverEffect", "Line Hover Effect")} value={vLineHover} onChange={setVLineHover} />
-									<AdvancedColorItem label={t("settings.appearance.advanced.selectionHighlight", "Selection Highlight")} value={vSelection} onChange={setVSelection} />
+									<AdvancedColorItem label={t("settings.appearance.advanced.editorCanvas", "Editor Canvas")} value={vEditorBg} cssVar="--editor-bg" onChange={setVEditorBg} />
+									<AdvancedColorItem label={t("settings.appearance.advanced.activeLineHighlight", "Active Line Highlight")} value={vActiveLine} cssVar="--active-line-bg" onChange={setVActiveLine} />
+									<AdvancedColorItem label={t("settings.appearance.advanced.lineHoverEffect", "Line Hover Effect")} value={vLineHover} cssVar="--line-hover-bg" onChange={setVLineHover} />
+									<AdvancedColorItem label={t("settings.appearance.advanced.selectionHighlight", "Selection Highlight")} value={vSelection} cssVar="--selection-color" onChange={setVSelection} />
 								</Grid>
 								<AdvancedSliderItem label={t("settings.appearance.advanced.chipBorderRadius", "Chip Border Radius")} icon={<Stack24Regular />} value={vChipRadius} min={0} max={32} onChange={setVChipRadius} unit="px" />
 								<AdvancedSliderItem label={t("settings.appearance.advanced.chipSpacing", "Chip Spacing (Gap)")} icon={<Stack24Regular />} value={vChipGap} min={0} max={32} onChange={setVChipGap} unit="px" />
@@ -1069,14 +1059,14 @@ export const SettingsAppearanceTab = () => {
 						<Card>
 							<Flex direction="column" gap="4">
 								<Grid columns="2" gap="3">
-									<AdvancedColorItem label={t("settings.appearance.advanced.audioBarColor", "Audio Bar Color")} value={vAudioBarBg} onChange={setVAudioBarBg} />
-									<AdvancedColorItem label={t("settings.appearance.advanced.audioBarText", "Audio Bar Text")} value={vAudioBarText} onChange={setVAudioBarText} />
-									<AdvancedColorItem label={t("settings.appearance.advanced.waveformInactive", "Waveform Inactive")} value={advWaveformColor} onChange={setAdvWaveformColor} />
-									<AdvancedColorItem label={t("settings.appearance.advanced.waveformProgress", "Waveform Progress")} value={advWaveformProgress} onChange={setAdvWaveformProgress} />
+									<AdvancedColorItem label={t("settings.appearance.advanced.audioBarColor", "Audio Bar Color")} value={vAudioBarBg} cssVar="--audio-bar-bg" onChange={setVAudioBarBg} />
+									<AdvancedColorItem label={t("settings.appearance.advanced.audioBarText", "Audio Bar Text")} value={vAudioBarText} cssVar="--audio-bar-text" onChange={setVAudioBarText} />
+									<AdvancedColorItem label={t("settings.appearance.advanced.waveformInactive", "Waveform Inactive")} value={advWaveformColor} cssVar="--adv-waveform-color" onChange={setAdvWaveformColor} />
+									<AdvancedColorItem label={t("settings.appearance.advanced.waveformProgress", "Waveform Progress")} value={advWaveformProgress} cssVar="--adv-waveform-progress" onChange={setAdvWaveformProgress} />
 								</Grid>
-								<AdvancedColorItem label="Romanization Text" value={vRomanColor} onChange={setVRomanColor} />
-								<AdvancedColorItem label="Translation Text" value={vTransColor} onChange={setVTransColor} />
-								<AdvancedColorItem label="Genius Header Color" value={vGeniusHeaderColor} onChange={setVGeniusHeaderColor} />
+								<AdvancedColorItem label="Romanization Text" value={vRomanColor} cssVar="--romanization-color" onChange={setVRomanColor} />
+								<AdvancedColorItem label="Translation Text" value={vTransColor} cssVar="--translation-color" onChange={setVTransColor} />
+								<AdvancedColorItem label="Genius Header Color" value={vGeniusHeaderColor} cssVar="--genius-header-color" onChange={setVGeniusHeaderColor} />
 							</Flex>
 						</Card>
 					</Flex>
@@ -1093,9 +1083,9 @@ export const SettingsAppearanceTab = () => {
 									<Switch checked={legacyDarkTheme} onCheckedChange={setLegacyDarkTheme} />
 								</Flex>
 								<Grid columns="2" gap="3">
-									<AdvancedColorItem label="Scrollbar Thumb" value={vScrollbar} onChange={setVScrollbar} />
-									<AdvancedColorItem label="Dialog Background" value={vDialogBg} onChange={setVDialogBg} />
-									<AdvancedColorItem label="Dialog Border" value={vDialogBorder} onChange={setVDialogBorder} />
+									<AdvancedColorItem label="Scrollbar Thumb" value={vScrollbar} cssVar="--scrollbar-thumb-color" onChange={setVScrollbar} />
+									<AdvancedColorItem label="Dialog Background" value={vDialogBg} cssVar="--dialog-bg" onChange={setVDialogBg} />
+									<AdvancedColorItem label="Dialog Border" value={vDialogBorder} cssVar="--dialog-border" onChange={setVDialogBorder} />
 								</Grid>
 								<AdvancedSliderItem label="Global Border Radius" icon={<Stack24Regular />} value={vGlobalRadius} min={0} max={40} onChange={setVGlobalRadius} unit="px" />
 								<AdvancedSliderItem label="Global Border Width" icon={<Timer24Regular />} value={vGlobalBorderWidth} min={0} max={8} onChange={setVGlobalBorderWidth} unit="px" />
@@ -1183,8 +1173,324 @@ export const SettingsAppearanceTab = () => {
 };
 
 // --- Helper Components for Advanced Editor ---
+const DebouncedColorInput = memo(({
+	value,
+	onChange,
+	cssVar,
+	style,
+	className,
+}: {
+	value: string;
+	onChange: (color: string) => void;
+	cssVar?: string;
+	style?: React.CSSProperties;
+	className?: string;
+}) => {
+	const inputRef = useRef<HTMLInputElement>(null);
+	const latestValueRef = useRef(value);
+	const committedValueRef = useRef(value);
+	const timerRef = useRef<number | null>(null);
+	const rafRef = useRef<number | null>(null);
 
-const AdvancedColorItem = ({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) => (
+	useEffect(() => {
+		latestValueRef.current = value;
+		committedValueRef.current = value;
+		if (
+			inputRef.current &&
+			document.activeElement !== inputRef.current &&
+			inputRef.current.value !== (value || "#000000")
+		) {
+			inputRef.current.value = value || "#000000";
+		}
+	}, [value]);
+
+	const commit = useCallback(
+		(color: string) => {
+			if (timerRef.current !== null) {
+				window.clearTimeout(timerRef.current);
+				timerRef.current = null;
+			}
+			if (rafRef.current !== null) {
+				cancelAnimationFrame(rafRef.current);
+				rafRef.current = null;
+			}
+			if (committedValueRef.current === color) {
+				return;
+			}
+			committedValueRef.current = color;
+			latestValueRef.current = color;
+
+			onChange(color);
+
+			if (cssVar) {
+				requestAnimationFrame(() => {
+					document.documentElement.style.removeProperty(cssVar);
+					const radixEls = document.querySelectorAll<HTMLElement>(".radix-themes");
+					for (let i = 0; i < radixEls.length; i++) {
+						radixEls[i].style.removeProperty(cssVar);
+					}
+				});
+			}
+		},
+		[onChange, cssVar],
+	);
+
+	const handleInput = useCallback(
+		(e: React.FormEvent<HTMLInputElement>) => {
+			const newColor = (e.target as HTMLInputElement).value;
+			latestValueRef.current = newColor;
+
+			if (cssVar) {
+				if (rafRef.current === null) {
+					rafRef.current = requestAnimationFrame(() => {
+						const colorToApply = latestValueRef.current;
+						document.documentElement.style.setProperty(cssVar, colorToApply, "important");
+						const radixEls = document.querySelectorAll<HTMLElement>(".radix-themes");
+						for (let i = 0; i < radixEls.length; i++) {
+							radixEls[i].style.setProperty(cssVar, colorToApply, "important");
+						}
+						rafRef.current = null;
+					});
+				}
+			}
+
+			if (timerRef.current !== null) {
+				window.clearTimeout(timerRef.current);
+			}
+			timerRef.current = window.setTimeout(() => {
+				commit(latestValueRef.current);
+			}, 2000);
+		},
+		[cssVar, commit],
+	);
+
+	const handleChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => {
+			const newColor = (e.target as HTMLInputElement).value;
+			latestValueRef.current = newColor;
+			commit(newColor);
+		},
+		[commit],
+	);
+
+	const handleBlur = useCallback(() => {
+		commit(latestValueRef.current);
+	}, [commit]);
+
+	useEffect(() => {
+		return () => {
+			if (timerRef.current !== null) {
+				window.clearTimeout(timerRef.current);
+			}
+			if (rafRef.current !== null) {
+				cancelAnimationFrame(rafRef.current);
+			}
+			if (cssVar) {
+				document.documentElement.style.removeProperty(cssVar);
+				const radixEls = document.querySelectorAll<HTMLElement>(".radix-themes");
+				for (let i = 0; i < radixEls.length; i++) {
+					radixEls[i].style.removeProperty(cssVar);
+				}
+			}
+		};
+	}, [cssVar]);
+
+	return (
+		<input
+			ref={inputRef}
+			type="color"
+			defaultValue={value || "#000000"}
+			onInput={handleInput}
+			onChange={handleChange}
+			onBlur={handleBlur}
+			style={style}
+			className={className}
+		/>
+	);
+});
+
+const CustomAccentColorControl = memo(({
+	color,
+	onChange,
+	isDarkTheme,
+}: {
+	color: string;
+	onChange: (color: string) => void;
+	isDarkTheme: boolean;
+}) => {
+	const latestColorRef = useRef(color);
+	const committedColorRef = useRef(color);
+	const timerRef = useRef<number | null>(null);
+	const rafRef = useRef<number | null>(null);
+	const inputRef = useRef<HTMLInputElement>(null);
+	const hexTextRef = useRef<HTMLSpanElement>(null);
+
+	useEffect(() => {
+		latestColorRef.current = color;
+		committedColorRef.current = color;
+		if (hexTextRef.current) {
+			hexTextRef.current.textContent = color.toUpperCase();
+		}
+		if (
+			inputRef.current &&
+			document.activeElement !== inputRef.current &&
+			inputRef.current.value !== color
+		) {
+			inputRef.current.value = color;
+		}
+	}, [color]);
+
+	const commit = useCallback(
+		(newColor: string) => {
+			if (timerRef.current !== null) {
+				window.clearTimeout(timerRef.current);
+				timerRef.current = null;
+			}
+			if (rafRef.current !== null) {
+				cancelAnimationFrame(rafRef.current);
+				rafRef.current = null;
+			}
+			if (committedColorRef.current === newColor) {
+				return;
+			}
+			committedColorRef.current = newColor;
+			latestColorRef.current = newColor;
+
+			onChange(newColor);
+
+			requestAnimationFrame(() => {
+				const scale = generateRadixScale(newColor, isDarkTheme);
+				const root = document.documentElement;
+				const radixEls = document.querySelectorAll<HTMLElement>(".radix-themes");
+				for (const k of Object.keys(scale)) {
+					root.style.removeProperty(k);
+					for (let i = 0; i < radixEls.length; i++) {
+						radixEls[i].style.removeProperty(k);
+					}
+				}
+			});
+		},
+		[onChange, isDarkTheme],
+	);
+
+	const handleInput = useCallback(
+		(e: React.FormEvent<HTMLInputElement>) => {
+			const newColor = (e.target as HTMLInputElement).value;
+			latestColorRef.current = newColor;
+
+			if (rafRef.current === null) {
+				rafRef.current = requestAnimationFrame(() => {
+					const colorToApply = latestColorRef.current;
+					const scale = generateRadixScale(colorToApply, isDarkTheme);
+					const root = document.documentElement;
+					const radixEls = document.querySelectorAll<HTMLElement>(".radix-themes");
+					for (const [k, v] of Object.entries(scale)) {
+						root.style.setProperty(k, v, "important");
+						for (let i = 0; i < radixEls.length; i++) {
+							radixEls[i].style.setProperty(k, v, "important");
+						}
+					}
+					if (hexTextRef.current) {
+						hexTextRef.current.textContent = colorToApply.toUpperCase();
+					}
+					rafRef.current = null;
+				});
+			}
+
+			if (timerRef.current !== null) {
+				window.clearTimeout(timerRef.current);
+			}
+			timerRef.current = window.setTimeout(() => {
+				commit(latestColorRef.current);
+			}, 2000);
+		},
+		[isDarkTheme, commit],
+	);
+
+	const handleChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => {
+			const newColor = (e.target as HTMLInputElement).value;
+			latestColorRef.current = newColor;
+			commit(newColor);
+		},
+		[commit],
+	);
+
+	const handleBlur = useCallback(() => {
+		commit(latestColorRef.current);
+	}, [commit]);
+
+	useEffect(() => {
+		return () => {
+			if (timerRef.current !== null) {
+				window.clearTimeout(timerRef.current);
+			}
+			if (rafRef.current !== null) {
+				cancelAnimationFrame(rafRef.current);
+			}
+			const scale = generateRadixScale(latestColorRef.current, isDarkTheme);
+			const root = document.documentElement;
+			const radixEls = document.querySelectorAll<HTMLElement>(".radix-themes");
+			for (const k of Object.keys(scale)) {
+				root.style.removeProperty(k);
+				for (let i = 0; i < radixEls.length; i++) {
+					radixEls[i].style.removeProperty(k);
+				}
+			}
+		};
+	}, [isDarkTheme]);
+
+	return (
+		<Flex direction="column" gap="3">
+			<Flex align="center" gap="3">
+				<input
+					ref={inputRef}
+					type="color"
+					defaultValue={color}
+					onInput={handleInput}
+					onChange={handleChange}
+					onBlur={handleBlur}
+					style={{
+						width: "40px",
+						height: "40px",
+						padding: 0,
+						border: "none",
+						borderRadius: "var(--radius-3)",
+						cursor: "pointer",
+						backgroundColor: "transparent",
+					}}
+				/>
+				<Text size="2" weight="bold">
+					<span ref={hexTextRef}>{color.toUpperCase()}</span>
+				</Text>
+			</Flex>
+			<Grid columns="12" gap="1">
+				{Array.from({ length: 12 }).map((_, i) => (
+					<Box
+						key={`shade-${i + 1}`}
+						style={{
+							height: "20px",
+							borderRadius: "var(--radius-1)",
+							backgroundColor: `var(--accent-${i + 1})`,
+						}}
+					/>
+				))}
+			</Grid>
+		</Flex>
+	);
+});
+
+const AdvancedColorItem = memo(({
+	label,
+	value,
+	cssVar,
+	onChange,
+}: {
+	label: string;
+	value: string;
+	cssVar?: string;
+	onChange: (v: string) => void;
+}) => (
 	<Flex direction="column" gap="1">
 		<Flex align="center" justify="between">
 			<Text size="1" color="gray" weight="bold">{label}</Text>
@@ -1194,14 +1500,21 @@ const AdvancedColorItem = ({ label, value, onChange }: { label: string, value: s
 				</IconButton>
 			)}
 		</Flex>
-		<input 
-			type="color" 
-			value={value || "#000000"} 
-			onChange={(e) => onChange(e.target.value)} 
-			style={{ width: "100%", height: "24px", border: "1px solid var(--gray-5)", borderRadius: "4px", cursor: "pointer", padding: 0 }}
+		<DebouncedColorInput
+			value={value || "#000000"}
+			cssVar={cssVar}
+			onChange={onChange}
+			style={{
+				width: "100%",
+				height: "24px",
+				border: "1px solid var(--gray-5)",
+				borderRadius: "4px",
+				cursor: "pointer",
+				padding: 0,
+			}}
 		/>
 	</Flex>
-);
+));
 
 const AdvancedSliderItem = ({ label, icon, value, min, max, step = 1, onChange, unit }: { label: string, icon: React.ReactNode, value: number, min: number, max: number, step?: number, onChange: (v: number) => void, unit: string }) => (
 	<Box>

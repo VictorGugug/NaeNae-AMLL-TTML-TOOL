@@ -406,9 +406,13 @@ function App() {
 		}
 	}, [appFont, customFontName]);
 
-	const customThemeStyles = useCustomAccent
-		? generateRadixScale(customAccentColor, isDarkTheme)
-		: null;
+	const customThemeStyles = useMemo(
+		() =>
+			useCustomAccent
+				? generateRadixScale(customAccentColor, isDarkTheme)
+				: null,
+		[useCustomAccent, customAccentColor, isDarkTheme],
+	);
 
 	const customStyleString = useMemo(() => {
 		let vars = "";
